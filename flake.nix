@@ -8,6 +8,11 @@
 
     impermanence.url = "github:nix-community/impermanence";
 
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -52,7 +57,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixos-hardware, impermanence, home-manager, stylix, zen-browser, firefox-addons, niri, dms, ... }@inputs:
+  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, stylix, zen-browser, firefox-addons, niri, dms, ... }@inputs:
   {
     nixosConfigurations.framework-13 = nixpkgs.lib.nixosSystem {
       specialArgs = { inherit inputs; };
@@ -60,6 +65,7 @@
         { nixpkgs.hostPlatform = "x86_64-linux"; }
         nixos-hardware.nixosModules.framework-12th-gen-intel
         impermanence.nixosModules.impermanence
+        disko.nixosModules.disko
         home-manager.nixosModules.home-manager
         stylix.nixosModules.stylix
         niri.nixosModules.niri
