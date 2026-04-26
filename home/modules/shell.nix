@@ -177,5 +177,6 @@ in
       name  = "robert";
       email = "robert@example.com";
     };
+    settings.credential."https://github.com".helper = "!gh auth git-credential";
   };
 }

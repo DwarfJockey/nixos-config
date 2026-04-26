@@ -22,6 +22,7 @@
         ".config/ghostty"
         ".config/nushell"
         ".config/1Password"
+        ".config/gh"
         ".config/senpai"
         ".local/share/1Password"
         ".local/share/keyrings"
