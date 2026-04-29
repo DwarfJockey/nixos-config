@@ -7,7 +7,7 @@ let
     nativeBuildInputs = [ pkgs.lutgen pkgs.imagemagick ];
   } ''
     mkdir -p $out
-    for img in ${../wallpapers}/*; do
+    for img in ${../../home/wallpapers}/*; do
       [ -f "$img" ] || continue
       basename="$(basename "$img")"
       lutgen apply -o "$out/$basename" "$img" -- \

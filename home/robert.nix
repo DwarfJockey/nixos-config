@@ -4,9 +4,9 @@
   home-manager.users.robert = {
 
     imports = [
-      ./modules/shell.nix
-      ./modules/editor.nix
-      ./modules/desktop.nix
+      ../modules/home-manager/shell.nix
+      ../modules/home-manager/editor.nix
+      ../modules/home-manager/desktop.nix
     ];
 
     # ── Impermanence ─────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@
     # ── Packages ─────────────────────────────────────────────────────────────
     home.packages = with pkgs; [
       nautilus
-      celluloid
+      # celluloid  # temporarily removed: pulls deno→rusty-v8 via yt-dlp
       file-roller
       gnome-text-editor
       claude-code

@@ -51,13 +51,19 @@
 
     nix-monitor.url = "github:stefan-matic/nix-monitor";
 
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
+
     nixvim = {
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, stylix, zen-browser, firefox-addons, niri, dms, ... }@inputs:
+  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, stylix, zen-browser, firefox-addons, niri, dms, agenix, ... }@inputs:
   {
     nixosConfigurations.framework-13 = nixpkgs.lib.nixosSystem {
       specialArgs = { inherit inputs; };
@@ -70,6 +76,7 @@
         stylix.nixosModules.stylix
         niri.nixosModules.niri
         dms.nixosModules.default
+        agenix.nixosModules.default
         ./hosts/framework-13
       ];
     };
