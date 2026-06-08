@@ -49,8 +49,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nix-monitor.url = "github:stefan-matic/nix-monitor";
-
     agenix = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";

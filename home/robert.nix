@@ -24,11 +24,16 @@
         ".config/1Password"
         ".config/gh"
         ".config/senpai"
+        ".config/dconf"
+        ".config/gtk-3.0"
+        ".config/gtk-4.0"
         ".local/share/1Password"
         ".local/share/keyrings"
         ".local/share/org.gnome.TextEditor"
         ".local/share/Steam"
+        ".local/share/Bay 12 Games"
         ".local/share/nvim"
+        ".local/share/gvfs-metadata"
         ".ssh"
         ".claude"
       ];
@@ -40,7 +45,7 @@
     # ── Packages ─────────────────────────────────────────────────────────────
     home.packages = with pkgs; [
       nautilus
-      # celluloid  # temporarily removed: pulls deno→rusty-v8 via yt-dlp
+      celluloid  # temporarily removed: pulls deno→rusty-v8 via yt-dlp
       file-roller
       gnome-text-editor
       claude-code

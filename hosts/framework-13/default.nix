@@ -8,6 +8,7 @@
     ../../modules/nixos/nix.nix
     ../../modules/nixos/networking.nix
     ../../modules/nixos/audio.nix
+    ../../modules/nixos/bluetooth.nix
     ../../modules/nixos/desktop.nix
     ../../modules/nixos/theming.nix
     ../../modules/nixos/persistence.nix

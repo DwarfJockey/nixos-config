@@ -38,9 +38,10 @@ let
   '';
 
   # Recolor structural icons (folders, mimetypes, devices, actions, etc.) to
-  # the Stylix base16 palette. App icons keep their brand colors so logos stay
-  # recognizable. Papirus-Dark's larger sizes are symlinked into Papirus, so
-  # we have to walk both subthemes for the recolor to actually show up.
+  # the full Stylix base16 palette (base00–base0F). App icons keep their brand
+  # colors so logos stay recognizable. Papirus-Dark's larger sizes are
+  # symlinked into Papirus, so we have to walk both subthemes for the recolor
+  # to actually show up.
   recoloredPapirus = pkgs.runCommand "papirus-icon-theme-recolored" {
     nativeBuildInputs = [ pkgs.python3 ];
   } ''
@@ -50,7 +51,7 @@ let
 
     cd $out/share/icons
 
-    find -L Papirus Papirus-Dark Papirus-Light -type f -name '*.svg' \
+    find Papirus Papirus-Dark Papirus-Light -type f -name '*.svg' \
       \( -path '*/places/*' \
       -o -path '*/mimetypes/*' \
       -o -path '*/devices/*' \
@@ -67,7 +68,7 @@ let
 
     python3 -c '
 import sys
-BASE16 = [
+PALETTE = [
   "#${colors.base00}", "#${colors.base01}", "#${colors.base02}", "#${colors.base03}",
   "#${colors.base04}", "#${colors.base05}", "#${colors.base06}", "#${colors.base07}",
   "#${colors.base08}", "#${colors.base09}", "#${colors.base0A}", "#${colors.base0B}",
@@ -79,7 +80,7 @@ for src in sys.stdin.read().splitlines():
     src = src.strip().lower()
     if len(src) != 7 or not src.startswith("#"):
         continue
-    dst = min(BASE16, key=lambda b: dist(src, b))
+    dst = min(PALETTE, key=lambda b: dist(src, b))
     print(f"s/{src}/{dst}/gi")
 ' < $TMPDIR/papirus.colors > $TMPDIR/recolor.sed
 
@@ -93,29 +94,20 @@ in
     image =
       let c = config.lib.stylix.colors; in
       pkgs.runCommand "wallpaper.png" { buildInputs = [ pkgs.imagemagick ]; } ''
-        magick -size 2880x1920 \
-          gradient:"#${c.base00}"-"#${c.base01}" \
-          \( -size 2880x1920 xc:none \
-             -fill "#${c.base0B}18" \
-             -draw "circle 2880,1920 1800,900" \
-          \) -composite \
-          \( -size 2880x1920 xc:none \
-             -fill "#${c.base0D}12" \
-             -draw "circle 0,0 800,800" \
-          \) -composite \
-          $out
+        magick -size 2880x1920 xc:"#${c.base03}" $out
       '';
-    base16Scheme = "${pkgs.base16-schemes}/share/themes/tomorrow-night.yaml";
+    base16Scheme = "${pkgs.base16-schemes}/share/themes/material-darker.yaml";
     fonts = {
       serif = { package = pkgs.noto-fonts; name = "Noto Serif"; };
       sansSerif = { package = pkgs.adwaita-fonts; name = "Adwaita Sans"; };
       monospace = { package = pkgs.nerd-fonts.fira-code; name = "FiraCode Nerd Font"; };
+      emoji = { package = pkgs.noto-fonts-monochrome-emoji; name = "Noto Emoji"; };
       sizes = {
         applications = 11;
         terminal = 11;
       };
     };
-    cursor = {
+    cursor = { 
       package = recoloredCursors;
       name = "phinger-cursors-dark";
       size = 24;

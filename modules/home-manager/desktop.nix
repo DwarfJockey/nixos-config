@@ -3,29 +3,6 @@
 let
   colors = config.lib.stylix.colors;
 
-  recoloredWallpapers = pkgs.runCommand "recolored-wallpapers" {
-    nativeBuildInputs = [ pkgs.lutgen pkgs.imagemagick ];
-  } ''
-    mkdir -p $out
-    for img in ${../../home/wallpapers}/*; do
-      [ -f "$img" ] || continue
-      basename="$(basename "$img")"
-      lutgen apply -o "$out/$basename" "$img" -- \
-        "#${colors.base00}" "#${colors.base01}" "#${colors.base02}" "#${colors.base03}" \
-        "#${colors.base04}" "#${colors.base05}" "#${colors.base06}" "#${colors.base07}" \
-        "#${colors.base08}" "#${colors.base09}" "#${colors.base0A}" "#${colors.base0B}" \
-        "#${colors.base0C}" "#${colors.base0D}" "#${colors.base0E}" "#${colors.base0F}"
-      # Darken slightly for contrast with windows
-      magick "$out/$basename" -modulate 85,100,100 "$out/$basename"
-    done
-
-    # Create default.png from the first image for DMS wallpaperPath
-    first="$(find $out -maxdepth 1 -type f | sort | head -n1)"
-    if [ -n "$first" ]; then
-      cp "$first" "$out/default.png"
-    fi
-  '';
-
   baseShadow = {
     enable = true;
     softness = 20;
@@ -59,7 +36,6 @@ in
     inputs.dms.homeModules.dank-material-shell
     inputs.dms.homeModules.niri
     inputs.dms-plugin-registry.modules.default
-    inputs.nix-monitor.homeManagerModules.default
   ];
 
   # ── Niri ───────────────────────────────────────────────────────────────────
@@ -69,8 +45,13 @@ in
     hotkey-overlay.skip-at-startup = true;
 
     spawn-at-startup = [
+      { command = ["zen-twilight"]; }
+      { command = ["steam" "-silent"]; }
+      { command = ["1password" "--silent"]; }
       { command = ["sh" "-c" "for i in $(seq 1 30); do dms ipc call lock lock && exit 0; sleep 1; done"]; }
     ];
+
+    workspaces."1" = {};
 
     layout.border.enable = false;
     layout.struts.bottom = 8;
@@ -118,6 +99,7 @@ in
       }
       { # Zen Twilight
         matches = [{ app-id = "zen-twilight"; }];
+        open-on-workspace = "1";
         default-column-width = { proportion = 1.0; };
       }
       { # Zen Twilight Picture-in-picture
@@ -170,7 +152,7 @@ in
       "Super+L".action.spawn = ["dms" "ipc" "call" "lock" "lock"];
 
       # ── Apps ───────────────────────────────────────────────────────────────
-      "Mod+Return".action.spawn = "ghostty";
+      "Mod+T".action.spawn      = "ghostty";
       "Mod+B".action.spawn      = "zen-twilight";
       "Mod+E".action.spawn      = "nautilus";
 
@@ -179,24 +161,46 @@ in
       "Mod+F".action.maximize-column                                = [];
       "Mod+Shift+F".action.fullscreen-window                        = [];
       "Mod+C".action.center-column                                  = [];
+      "Mod+Ctrl+C".action.center-visible-columns                    = [];
+      "Mod+Ctrl+F".action.expand-column-to-available-width          = [];
       "Mod+V".action.toggle-window-floating                         = [];
       "Mod+Shift+V".action.switch-focus-between-floating-and-tiling = [];
 
-      # ── Focus ──────────────────────────────────────────────────────────────
+      # ── Focus column/window ────────────────────────────────────────────────
       "Mod+Left".action.focus-column-left   = [];
       "Mod+Right".action.focus-column-right = [];
       "Mod+Down".action.focus-window-down   = [];
       "Mod+Up".action.focus-window-up       = [];
+      "Mod+H".action.focus-column-left      = [];
+      "Mod+L".action.focus-column-right     = [];
+      "Mod+J".action.focus-window-down      = [];
+      "Mod+K".action.focus-window-up        = [];
       "Mod+Home".action.focus-column-first  = [];
       "Mod+End".action.focus-column-last    = [];
 
-      # ── Move windows ───────────────────────────────────────────────────────
-      "Mod+Shift+Left".action.move-column-left     = [];
-      "Mod+Shift+Right".action.move-column-right   = [];
-      "Mod+Shift+Down".action.move-window-down     = [];
-      "Mod+Shift+Up".action.move-window-up         = [];
-      "Mod+Shift+Home".action.move-column-to-first = [];
-      "Mod+Shift+End".action.move-column-to-last   = [];
+      # ── Focus monitor ──────────────────────────────────────────────────────
+      "Mod+Shift+Left".action.focus-monitor-left   = [];
+      "Mod+Shift+Right".action.focus-monitor-right = [];
+      "Mod+Shift+Up".action.focus-monitor-up       = [];
+      "Mod+Shift+Down".action.focus-monitor-down   = [];
+
+      # ── Move column/window ─────────────────────────────────────────────────
+      "Mod+Ctrl+Left".action.move-column-left     = [];
+      "Mod+Ctrl+Right".action.move-column-right   = [];
+      "Mod+Ctrl+Down".action.move-window-down     = [];
+      "Mod+Ctrl+Up".action.move-window-up         = [];
+      "Mod+Ctrl+H".action.move-column-left        = [];
+      "Mod+Ctrl+L".action.move-column-right       = [];
+      "Mod+Ctrl+J".action.move-window-down        = [];
+      "Mod+Ctrl+K".action.move-window-up          = [];
+      "Mod+Ctrl+Home".action.move-column-to-first = [];
+      "Mod+Ctrl+End".action.move-column-to-last   = [];
+
+      # ── Move column to monitor ─────────────────────────────────────────────
+      "Mod+Ctrl+Shift+Left".action.move-column-to-monitor-left   = [];
+      "Mod+Ctrl+Shift+Right".action.move-column-to-monitor-right = [];
+      "Mod+Ctrl+Shift+Up".action.move-column-to-monitor-up       = [];
+      "Mod+Ctrl+Shift+Down".action.move-column-to-monitor-down   = [];
 
       # ── Column/window sizing ───────────────────────────────────────────────
       "Mod+Minus".action.set-column-width        = "-10%";
@@ -206,14 +210,11 @@ in
       "Mod+R".action.reset-window-height         = [];
 
       # ── Workspaces ─────────────────────────────────────────────────────────
-      "Mod+U".action.focus-workspace-down               = [];
-      "Mod+I".action.focus-workspace-up                 = [];
-      "Mod+Ctrl+Down".action.focus-workspace-down       = [];
-      "Mod+Ctrl+Up".action.focus-workspace-up           = [];
-      "Mod+Shift+U".action.move-column-to-workspace-down         = [];
-      "Mod+Shift+I".action.move-column-to-workspace-up           = [];
-      "Mod+Ctrl+Shift+Down".action.move-column-to-workspace-down = [];
-      "Mod+Ctrl+Shift+Up".action.move-column-to-workspace-up     = [];
+      "Mod+Tab".action.focus-workspace-previous          = [];
+      "Mod+U".action.focus-workspace-down                = [];
+      "Mod+I".action.focus-workspace-up                  = [];
+      "Mod+Shift+U".action.move-column-to-workspace-down = [];
+      "Mod+Shift+I".action.move-column-to-workspace-up   = [];
 
       "Mod+1".action.focus-workspace = 1;
       "Mod+2".action.focus-workspace = 2;
@@ -225,18 +226,18 @@ in
       "Mod+8".action.focus-workspace = 8;
       "Mod+9".action.focus-workspace = 9;
 
-      "Mod+Shift+1".action.move-column-to-workspace = 1;
-      "Mod+Shift+2".action.move-column-to-workspace = 2;
-      "Mod+Shift+3".action.move-column-to-workspace = 3;
-      "Mod+Shift+4".action.move-column-to-workspace = 4;
-      "Mod+Shift+5".action.move-column-to-workspace = 5;
-      "Mod+Shift+6".action.move-column-to-workspace = 6;
-      "Mod+Shift+7".action.move-column-to-workspace = 7;
-      "Mod+Shift+8".action.move-column-to-workspace = 8;
-      "Mod+Shift+9".action.move-column-to-workspace = 9;
+      "Mod+Ctrl+1".action.move-column-to-workspace = 1;
+      "Mod+Ctrl+2".action.move-column-to-workspace = 2;
+      "Mod+Ctrl+3".action.move-column-to-workspace = 3;
+      "Mod+Ctrl+4".action.move-column-to-workspace = 4;
+      "Mod+Ctrl+5".action.move-column-to-workspace = 5;
+      "Mod+Ctrl+6".action.move-column-to-workspace = 6;
+      "Mod+Ctrl+7".action.move-column-to-workspace = 7;
+      "Mod+Ctrl+8".action.move-column-to-workspace = 8;
+      "Mod+Ctrl+9".action.move-column-to-workspace = 9;
 
       # ── Overview ───────────────────────────────────────────────────────────
-      "Mod+Tab".action.toggle-overview = [];
+      "Mod+Grave".action.toggle-overview = [];
 
       # ── Screenshots (via DMS) ──────────────────────────────────────────────
       "Print".action.spawn      = ["dms" "ipc" "call" "niri" "screenshot"];
@@ -273,14 +274,15 @@ in
       useAutoLocation = true;
       use24HourClock  = false;
       cursorSettings.niri.hideWhenTyping = true;
+      controlCenterShowBatteryIcon = true;
       barConfigs = [
         {
           id            = "default";
           name          = "Main Bar";
           enabled       = true;
           leftWidgets   = [ "launcherButton" "workspaceSwitcher" ];
-          centerWidgets = [ "music" "clock" "weather" ];
-          rightWidgets  = [ "systemTray" "clipboard" "notificationButton" "nixMonitor" "battery" "controlCenterButton" ];
+          centerWidgets = [ "clock" "weather" ];
+          rightWidgets  = [ "systemTray" "clipboard" "notificationButton" "controlCenterButton" ];
         }
       ];
     };
@@ -292,35 +294,17 @@ in
       nightModeUseIPLocation      = true;
       nightModeTemperature        = 3400;
       nightModeHighTemperature    = 5000;
-      wallpaperCyclingEnabled     = true;
-      wallpaperCyclingMode        = "interval";
-      wallpaperCyclingInterval    = 60;
-      wallpaperTransition         = "fade";
+      wallpaperCyclingEnabled     = false;
     };
     plugins = {
       dankBatteryAlerts.enable = true;
-      nixMonitor.settings = {
-        showGenerations = false;
-        showStoreSize = false;
-      };
     };
   };
 
-  # ── Wallpaper recoloring ───────────────────────────────────────────────────
-  home.file."Pictures/Wallpapers".source = recoloredWallpapers;
-
-  # ── nix-monitor ────────────────────────────────────────────────────────────
-  programs.nix-monitor = {
-    enable = true;
-    generationsCommand = [
-      "sh" "-c"
-      "ls -d /nix/var/nix/profiles/system-*-link 2>/dev/null | wc -l"
-    ];
-    rebuildCommand = [
-      "bash" "-c"
-      "sudo -S nixos-rebuild switch --flake ${config.home.homeDirectory}/Documents/nixos#framework-13 2>&1"
-    ];
-  };
+  # ── Wallpaper ──────────────────────────────────────────────────────────────
+  # Reuses the gradient generated by stylix.image (modules/nixos/theming.nix)
+  # so SDDM and DMS show the same wallpaper.
+  home.file."Pictures/Wallpapers/default.png".source = config.stylix.image;
 
   # ── Zen Browser ────────────────────────────────────────────────────────────
   programs.zen-browser = {
@@ -369,7 +353,7 @@ in
   };
 
   # ── GTK ────────────────────────────────────────────────────────────────────
-  gtk.gtk4.theme = null;
+  #gtk.gtk4.theme = null;
 
   # ── Stylix targets ─────────────────────────────────────────────────────────
   stylix.targets.zen-browser.profileNames = [ "03bokykz.Default Profile" ];
