@@ -45,7 +45,7 @@
     # ── Packages ─────────────────────────────────────────────────────────────
     home.packages = with pkgs; [
       nautilus
-      celluloid  # temporarily removed: pulls deno→rusty-v8 via yt-dlp
+      celluloid
       file-roller
       gnome-text-editor
       claude-code
