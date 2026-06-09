@@ -16,7 +16,7 @@
         "Downloads"
         "Pictures"
         "Projects"
-        ".config/DankMaterialShell"
+        ".config/noctalia"
         ".config/niri"
         ".config/zen"
         ".config/ghostty"

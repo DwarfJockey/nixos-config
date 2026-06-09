@@ -8,6 +8,11 @@
     enable = true;
     defaultEditor = true;
 
+    # We deliberately make nixvim follow our nixpkgs (inputs.nixvim.inputs.nixpkgs.follows
+    # in flake.nix) to avoid a second nixpkgs. Set the source explicitly to acknowledge
+    # that and silence nixvim's "source affected by follows" warning.
+    nixpkgs.source = inputs.nixpkgs;
+
     opts = {
       number         = true;
       relativenumber = true;

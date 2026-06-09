@@ -1,7 +1,21 @@
 { config, lib, pkgs, inputs, ... }:
 
 let
-  colors = config.lib.stylix.colors;
+  noctaliaPkg = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
+
+  # Framework palette accents — Noctalia drives app colors via templates, but a
+  # few configs (Senpai) need static hex values that track the palette.
+  frameworkOrange     = "#ff7447";
+  frameworkLavender   = "#bda7f0";
+  frameworkFaint      = "#6b6e73";
+  frameworkSurface    = "#18191b";
+  frameworkSurfaceVar = "#242629";
+
+  # Subtle graphite gradient wallpaper. Noctalia requires a wallpaper image even
+  # when colors come from a palette.
+  wallpaper = pkgs.runCommand "wallpaper.png" { nativeBuildInputs = [ pkgs.imagemagick ]; } ''
+    magick -size 2880x1920 gradient:"${frameworkSurface}"-"${frameworkSurfaceVar}" $out
+  '';
 
   baseShadow = {
     enable = true;
@@ -33,9 +47,7 @@ in
 {
   imports = [
     inputs.zen-browser.homeModules.twilight
-    inputs.dms.homeModules.dank-material-shell
-    inputs.dms.homeModules.niri
-    inputs.dms-plugin-registry.modules.default
+    inputs.noctalia.homeModules.default
   ];
 
   # ── Niri ───────────────────────────────────────────────────────────────────
@@ -44,11 +56,14 @@ in
 
     hotkey-overlay.skip-at-startup = true;
 
+    # Noctalia compat: lets Noctalia panels grab focus reliably.
+    debug.honor-xdg-activation-with-invalid-serial = [];
+
     spawn-at-startup = [
+      { command = ["noctalia"]; }
       { command = ["zen-twilight"]; }
       { command = ["steam" "-silent"]; }
       { command = ["1password" "--silent"]; }
-      { command = ["sh" "-c" "for i in $(seq 1 30); do dms ipc call lock lock && exit 0; sleep 1; done"]; }
     ];
 
     workspaces."1" = {};
@@ -67,9 +82,17 @@ in
     };
 
     layer-rules = [
-      { # Popup windows (elevation 8)
-        matches = [{ namespace = "^dms:.*"; }];
-        excludes = [{ namespace = "^dms:bar$"; }];
+      { # Wallpaper sits in the overview backdrop
+        matches = [{ namespace = "^noctalia-backdrop"; }];
+        place-within-backdrop = true;
+      }
+      { # Panels / popups (elevation 8)
+        matches = [{ namespace = "^noctalia-"; }];
+        excludes = [
+          { namespace = "^noctalia-bar"; }
+          { namespace = "^noctalia-backdrop"; }
+          { namespace = "^noctalia-wallpaper"; }
+        ];
         shadow = popupShadow;
         geometry-corner-radius = {
           bottom-left = 10.0;
@@ -79,12 +102,21 @@ in
         };
       }
       { # Status bar (elevation 2)
-        matches = [{ namespace = "^dms:bar$"; }];
+        matches = [{ namespace = "^noctalia-bar"; }];
         shadow = baseShadow;
       }
     ];
 
     window-rules = [
+      { # Rounded + clipped corners for all windows (Noctalia compat)
+        geometry-corner-radius = {
+          top-left = 20.0;
+          top-right = 20.0;
+          bottom-left = 20.0;
+          bottom-right = 20.0;
+        };
+        clip-to-geometry = true;
+      }
       { # Active windows (elevation 4)
         matches = [{ is-active = true; }];
         shadow = activeShadow;
@@ -135,6 +167,12 @@ in
         matches = [ { app-id = "org.gnome.TextEditor"; } ];
         default-column-width = { proportion = 2. / 3.; };
       }
+      { # Noctalia Settings
+        matches = [ { app-id = "^dev\\.noctalia\\.Noctalia\\.Settings$"; } ];
+        open-floating = true;
+        default-column-width = { fixed = 1080; };
+        default-window-height = { fixed = 920; };
+      }
     ];
 
     animations = {
@@ -146,10 +184,15 @@ in
     };
 
     binds = {
+      # ── Core Noctalia binds ────────────────────────────────────────────────
+      "Mod+Space".action.spawn = ["noctalia" "msg" "panel-toggle" "launcher"];
+      "Mod+S".action.spawn     = ["noctalia" "msg" "panel-toggle" "control-center"];
+      "Mod+Comma".action.spawn = ["noctalia" "msg" "settings-toggle"];
+
       # ── Session ────────────────────────────────────────────────────────────
       "Mod+Shift+E".action.quit.skip-confirmation = true;
       "Mod+Shift+P".action.power-off-monitors     = [];
-      "Super+L".action.spawn = ["dms" "ipc" "call" "lock" "lock"];
+      "Super+L".action.spawn = ["noctalia" "msg" "session" "lock"];
 
       # ── Apps ───────────────────────────────────────────────────────────────
       "Mod+T".action.spawn      = "ghostty";
@@ -239,72 +282,87 @@ in
       # ── Overview ───────────────────────────────────────────────────────────
       "Mod+Grave".action.toggle-overview = [];
 
-      # ── Screenshots (via DMS) ──────────────────────────────────────────────
-      "Print".action.spawn      = ["dms" "ipc" "call" "niri" "screenshot"];
-      "Ctrl+Print".action.spawn = ["dms" "ipc" "call" "niri" "screenshotScreen"];
-      "Alt+Print".action.spawn  = ["dms" "ipc" "call" "niri" "screenshotWindow"];
+      # ── Screenshots (niri-native) ──────────────────────────────────────────
+      "Print".action.screenshot        = [];
+      "Ctrl+Print".action.screenshot-screen = [];
+      "Alt+Print".action.screenshot-window   = [];
 
-      # ── Audio (via DMS — shows OSD overlay) ────────────────────────────────
-      "XF86AudioRaiseVolume".action.spawn  = ["dms" "ipc" "call" "audio" "increment" "5"];
-      "XF86AudioLowerVolume".action.spawn  = ["dms" "ipc" "call" "audio" "decrement" "5"];
-      "XF86AudioMute".action.spawn         = ["dms" "ipc" "call" "audio" "mute"];
-      "XF86AudioMicMute".action.spawn      = ["dms" "ipc" "call" "audio" "micmute"];
+      # ── Audio (via Noctalia — shows OSD overlay) ───────────────────────────
+      "XF86AudioRaiseVolume".action.spawn  = ["noctalia" "msg" "volume-up"];
+      "XF86AudioLowerVolume".action.spawn  = ["noctalia" "msg" "volume-down"];
+      "XF86AudioMute".action.spawn         = ["noctalia" "msg" "volume-mute"];
+      "XF86AudioMicMute".action.spawn      = ["noctalia" "msg" "mic-mute"];
 
-      # ── Brightness (via DMS — shows OSD overlay) ───────────────────────────
-      "XF86MonBrightnessUp".action.spawn   = ["dms" "ipc" "call" "brightness" "increment" "10" "backlight:intel_backlight"];
-      "XF86MonBrightnessDown".action.spawn = ["dms" "ipc" "call" "brightness" "decrement" "10" "backlight:intel_backlight"];
+      # ── Brightness (via Noctalia — shows OSD overlay) ──────────────────────
+      "XF86MonBrightnessUp".action.spawn   = ["noctalia" "msg" "brightness-up"];
+      "XF86MonBrightnessDown".action.spawn = ["noctalia" "msg" "brightness-down"];
     };
   };
 
-  # ── DankMaterialShell ──────────────────────────────────────────────────────
-  programs.dank-material-shell = {
+  # ── Noctalia shell ───────────────────────────────────────────────────────
+  programs.noctalia = {
     enable = true;
-    niri = {
-      enableKeybinds = false;
-      enableSpawn = true;
-    };
-    enableSystemMonitoring = true;
-    enableAudioWavelength = true;
-    enableClipboardPaste = true;
+    package = noctaliaPkg;
+    customPalettes.Framework = import ./framework-palette.nix;
     settings = {
-      blurredWallpaperLayer = true;
-      niriLayoutGapsOverride = 16;
-      niriLayoutBorderSize = 0;
-      useFahrenheit   = true;
-      useAutoLocation = true;
-      use24HourClock  = false;
-      cursorSettings.niri.hideWhenTyping = true;
-      controlCenterShowBatteryIcon = true;
-      barConfigs = [
-        {
-          id            = "default";
-          name          = "Main Bar";
-          enabled       = true;
-          leftWidgets   = [ "launcherButton" "workspaceSwitcher" ];
-          centerWidgets = [ "clock" "weather" ];
-          rightWidgets  = [ "systemTray" "clipboard" "notificationButton" "controlCenterButton" ];
-        }
-      ];
-    };
-    session = {
-      wallpaperPath               = "${config.home.homeDirectory}/Pictures/Wallpapers/default.png";
-      nightModeEnabled            = true;
-      nightModeAutoEnabled        = true;
-      nightModeAutoMode           = "location";
-      nightModeUseIPLocation      = true;
-      nightModeTemperature        = 3400;
-      nightModeHighTemperature    = 5000;
-      wallpaperCyclingEnabled     = false;
-    };
-    plugins = {
-      dankBatteryAlerts.enable = true;
+      theme = {
+        mode = "dark";
+        source = "custom";
+        custom_palette = "Framework";
+        # App theming: render Noctalia's palette into GTK/Qt/Ghostty configs,
+        # plus the community Zen Browser template (its apply.sh injects @imports
+        # into the Zen profile's chrome CSS).
+        templates = {
+          enable_builtin_templates   = true;
+          builtin_ids                = [ "gtk3" "gtk4" "qt" "ghostty" ];
+          enable_community_templates = true;
+          community_ids              = [ "zen-browser" ];
+        };
+      };
+
+      wallpaper = {
+        default.path = "${config.home.homeDirectory}/Pictures/Wallpapers/default.png";
+        automation.enabled = false;
+      };
+
+      bar.main = {
+        position    = "top";
+        enabled     = true;
+        margin_ends = 10;
+        start  = [ "launcher" "workspaces" ];
+        center = [ "notifications" "clock" "weather" ];
+        end    = [ "tray" "clipboard" "network" "bluetooth" "volume" "battery" "session" ];
+      };
+
+      shell = {
+        font_family = "Adwaita Sans";
+        settings_show_advanced = true;
+        panel = {
+          session_placement = "centered";
+          transparency_mode = "glass";
+        };
+      };
+
+      location.auto_locate  = true;
+      nightlight.enabled    = true;
+      notification.position = "top_center";
+      weather.unit          = "imperial";
+
+      widget = {
+        battery       = { hide_when_full = true; show_label = false; };
+        brightness.show_label = false;
+        clock         = { anchor = true; format = "{:%l:%M %P}"; };
+        notifications.hide_when_no_unread = true;
+        tray.drawer   = true;
+        volume.show_label = false;
+        workspaces    = { display = "name"; minimal = true; };
+      };
     };
   };
 
   # ── Wallpaper ──────────────────────────────────────────────────────────────
-  # Reuses the gradient generated by stylix.image (modules/nixos/theming.nix)
-  # so SDDM and DMS show the same wallpaper.
-  home.file."Pictures/Wallpapers/default.png".source = config.stylix.image;
+  # Solid Catppuccin-base image fed to Noctalia (see the `wallpaper` derivation).
+  home.file."Pictures/Wallpapers/default.png".source = wallpaper;
 
   # ── Zen Browser ────────────────────────────────────────────────────────────
   programs.zen-browser = {
@@ -334,11 +392,10 @@ in
       ];
       id = 0;
       isDefault = true;
-      userChrome = lib.mkAfter ''
-        .zen-browser-grain {
-          display: none !important;
-        }
-      '';
+      # userChrome.css is intentionally NOT managed here: the Noctalia
+      # zen-browser community template's apply.sh owns it at runtime (injects
+      # @import lines). Managing it via HM would make apply.sh clobber the
+      # store symlink and break the next rebuild.
       settings = {
         "browser.ai.control.default"            = "blocked";
         "browser.ai.control.linkPreviewKeyPoints" = "blocked";
@@ -352,19 +409,40 @@ in
     };
   };
 
-  # ── GTK ────────────────────────────────────────────────────────────────────
-  #gtk.gtk4.theme = null;
+  # ── Cursor / icons / GTK / Qt ──────────────────────────────────────────────
+  # Base dark theme + assets. Noctalia's templates overlay accent colors on top
+  # (gtk-3.0/4.0 noctalia.css, qt5ct/qt6ct color files).
+  home.pointerCursor = {
+    package = pkgs.phinger-cursors;
+    name    = "phinger-cursors-dark";
+    size    = 24;
+    gtk.enable = true;
+  };
 
-  # ── Stylix targets ─────────────────────────────────────────────────────────
-  stylix.targets.zen-browser.profileNames = [ "03bokykz.Default Profile" ];
-  # Prevent Stylix from baking the store wallpaper into DMS's session.json;
-  # sets the wallpaper via IPC instead.
-  stylix.targets.dank-material-shell.image.enable = false;
+  gtk = {
+    enable = true;
+    theme     = { package = pkgs.adw-gtk3; name = "adw-gtk3-dark"; };
+    iconTheme = { package = pkgs.papirus-icon-theme; name = "Papirus-Dark"; };
+    font      = { name = "Adwaita Sans"; size = 11; };
+    # Don't let HM manage gtk-4.0/gtk.css — the Noctalia gtk4 template's apply.sh
+    # owns it (injects @import noctalia.css). HM managing it collides at
+    # activation. GTK4/libadwaita colors come from the imported noctalia.css.
+    gtk4.theme = null;
+  };
+
+  qt = {
+    enable = true;
+    platformTheme.name = "qtct";
+  };
 
   # ── Ghostty ────────────────────────────────────────────────────────────────
   programs.ghostty = {
     enable = true;
     settings = {
+      # Colors come from the Noctalia "ghostty" template (writes ~/.config/ghostty/themes/noctalia).
+      theme = "noctalia";
+      font-family = "FiraCode Nerd Font";
+      font-size = 11;
       keybind = [
         "performable:ctrl+c=copy_to_clipboard"
         "ctrl+v=paste_from_clipboard"
@@ -381,11 +459,11 @@ in
       username = "dwarfjockey";
       password-cmd = [ "cat" "/persist/home/robert/.config/senpai/password" ];
       colors = {
-        prompt  = "#${colors.base0D}";
-        unread  = "#${colors.base0B}";
-        status  = "#${colors.base03}";
+        prompt  = frameworkOrange;
+        unread  = frameworkLavender;
+        status  = frameworkFaint;
         nicks   = {
-          _params = [ "self" "#${colors.base0D}" ];
+          _params = [ "self" frameworkOrange ];
         };
       };
     };

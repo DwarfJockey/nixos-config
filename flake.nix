@@ -18,8 +18,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    stylix = {
-      url = "github:danth/stylix";
+    noctalia = {
+      url = "github:noctalia-dev/noctalia-shell/v5";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -39,16 +39,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    dms = {
-      url = "github:AvengeMedia/DankMaterialShell/stable";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    dms-plugin-registry = {
-      url = "github:AvengeMedia/dms-plugin-registry";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     agenix = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -61,7 +51,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, stylix, zen-browser, firefox-addons, niri, dms, agenix, ... }@inputs:
+  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, zen-browser, firefox-addons, niri, agenix, ... }@inputs:
   {
     nixosConfigurations.framework-13 = nixpkgs.lib.nixosSystem {
       specialArgs = { inherit inputs; };
@@ -71,9 +61,7 @@
         impermanence.nixosModules.impermanence
         disko.nixosModules.disko
         home-manager.nixosModules.home-manager
-        stylix.nixosModules.stylix
         niri.nixosModules.niri
-        dms.nixosModules.default
         agenix.nixosModules.default
         ./hosts/framework-13
       ];
