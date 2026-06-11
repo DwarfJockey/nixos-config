@@ -6,18 +6,37 @@ let
   # Active (dark) Framework palette — single source for niri's focus-ring colors.
   palette = (import ./framework-palette.nix).dark;
 
-  # Framework palette accents — Noctalia drives app colors via templates, but a
-  # few configs (Senpai) need static hex values that track the palette.
-  frameworkOrange     = "#ff7447";
-  frameworkLavender   = "#bda7f0";
-  frameworkFaint      = "#6b6e73";
-  frameworkSurface    = "#18191b";
-  frameworkSurfaceVar = "#252628";  # gradient's lighter stop (frameworkSurface +6% toward white)
+  # Noctalia issue #2687: the community zen-browser template leaves black/grey
+  # bars on the window's background edges. Zen sets --zen-main-browser-background
+  # on the #zen-browser-background element (out-specificity-ing the template's
+  # :root rule) and also reads --zen-main-browser-background-old, which the
+  # template never sets. Paint both with --base (defined on `*` by the template,
+  # so this stays a static add-on — no Noctalia tokens needed).
+  zenBgFixCss = pkgs.writeText "zen-userChrome-bgfix.css" ''
+    #zen-browser-background {
+      --zen-main-browser-background: var(--base) !important;
+      --zen-main-browser-background-old: var(--base) !important;
+    }
+  '';
 
-  # Subtle graphite gradient wallpaper. Noctalia requires a wallpaper image even
-  # when colors come from a palette.
-  wallpaper = pkgs.runCommand "wallpaper.png" { nativeBuildInputs = [ pkgs.imagemagick ]; } ''
-    magick -size 2880x1920 gradient:"${frameworkSurface}"-"${frameworkSurfaceVar}" $out
+  # Inject an @import of the rendered fix into each Zen profile's userChrome.css,
+  # mirroring the community template's apply.sh. Idempotent; the unique filename
+  # keeps the community sed cleanup (which matches zen-userChrome\.css) off our line.
+  zenBgFixApply = pkgs.writeShellScript "zen-bgfix-apply.sh" ''
+    set -euo pipefail
+    cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}"
+    css="$cache_dir/noctalia/zen-browser/zen-userChrome-bgfix.css"
+    line="@import \"$css\";"
+    find "''${XDG_CONFIG_HOME:-$HOME/.config}/zen" "$HOME/.zen" \
+      -mindepth 2 -maxdepth 2 -type d -name chrome 2>/dev/null |
+      while IFS= read -r dir; do
+        uc="$dir/userChrome.css"
+        touch "$uc"
+        if ! grep -Fq "$line" "$uc"; then
+          [ -s "$uc" ] && [ -n "$(tail -c1 "$uc")" ] && echo >>"$uc"
+          printf '%s\n' "$line" >>"$uc"
+        fi
+      done
   '';
 
   baseShadow = {
@@ -341,11 +360,20 @@ in
           builtin_ids                = [ "gtk3" "gtk4" "qt" "ghostty" "niri" ];
           enable_community_templates = true;
           community_ids              = [ "zen-browser" ];
+          # Issue #2687 fix — add-on user template (see zenBgFix* in the let block).
+          user.zen_browser_bgfix = {
+            input_path  = "${zenBgFixCss}";
+            output_path = "$XDG_CACHE_HOME/noctalia/zen-browser/zen-userChrome-bgfix.css";
+            post_hook   = "bash '${zenBgFixApply}'";
+          };
         };
       };
 
+      # Static wallpaper, vendored in the repo so it survives the ephemeral root
+      # (the GUI/runtime wallpaper state in ~/.local/state/noctalia is not
+      # persisted). Noctalia reads [wallpaper.default].path from config.toml.
       wallpaper = {
-        default.path = "${config.home.homeDirectory}/Pictures/Wallpapers/default.png";
+        default.path = "${./wallpapers/framework-pro-7.png}";
         automation.enabled = false;
       };
 
@@ -386,6 +414,10 @@ in
 
       control_center.sidebar_section = "none";
 
+      # Lock the session as soon as Noctalia is up, so the autologin boots
+      # straight to the lock screen. Fires once per Noctalia start (per session).
+      hooks.started = "noctalia msg session lock";
+
       location.auto_locate  = true;
       nightlight.enabled    = true;
       notification.position = "top_center";
@@ -403,10 +435,6 @@ in
       };
     };
   };
-
-  # ── Wallpaper ──────────────────────────────────────────────────────────────
-  # Solid Catppuccin-base image fed to Noctalia (see the `wallpaper` derivation).
-  home.file."Pictures/Wallpapers/default.png".source = wallpaper;
 
   # ── Zen Browser ────────────────────────────────────────────────────────────
   programs.zen-browser = {
@@ -502,14 +530,6 @@ in
       nickname = "dwarfjockey";
       username = "dwarfjockey";
       password-cmd = [ "cat" "/persist/home/robert/.config/senpai/password" ];
-      colors = {
-        prompt  = frameworkOrange;
-        unread  = frameworkLavender;
-        status  = frameworkFaint;
-        nicks   = {
-          _params = [ "self" frameworkOrange ];
-        };
-      };
     };
   };
 }
