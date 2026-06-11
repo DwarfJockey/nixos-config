@@ -61,6 +61,5 @@ nix flake update <input-name>
 
 ## Conventions
 
-- Section headers use Unicode box-drawing: `# ── Section Name ──────────────`
 - Mutable users are disabled; user accounts are fully declarative
 - State version: `25.05`

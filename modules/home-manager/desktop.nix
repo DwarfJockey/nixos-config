@@ -3,13 +3,16 @@
 let
   noctaliaPkg = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
+  # Active (dark) Framework palette — single source for niri's focus-ring colors.
+  palette = (import ./framework-palette.nix).dark;
+
   # Framework palette accents — Noctalia drives app colors via templates, but a
   # few configs (Senpai) need static hex values that track the palette.
   frameworkOrange     = "#ff7447";
   frameworkLavender   = "#bda7f0";
   frameworkFaint      = "#6b6e73";
   frameworkSurface    = "#18191b";
-  frameworkSurfaceVar = "#242629";
+  frameworkSurfaceVar = "#252628";  # gradient's lighter stop (frameworkSurface +6% toward white)
 
   # Subtle graphite gradient wallpaper. Noctalia requires a wallpaper image even
   # when colors come from a palette.
@@ -19,27 +22,27 @@ let
 
   baseShadow = {
     enable = true;
-    softness = 20;
+    softness = 10;
     spread = 0;
-    offset = { x = 0; y = 4; };
+    offset = { x = 0; y = 2; };
     color = "#00000040";
     draw-behind-window = true;
   };
 
   activeShadow = {
     enable = true;
-    softness = 30;
-    spread = 2;
-    offset = { x = 0; y = 8; };
+    softness = 15;
+    spread = 1;
+    offset = { x = 0; y = 4; };
     color = "#00000050";
     draw-behind-window = true;
   };
 
   popupShadow = {
     enable = true;
-    softness = 40;
-    spread = 4;
-    offset = { x = 0; y = 12; };
+    softness = 20;
+    spread = 2;
+    offset = { x = 0; y = 6; };
     color = "#00000060";
     draw-behind-window = true;
   };
@@ -69,8 +72,15 @@ in
     workspaces."1" = {};
 
     layout.border.enable = false;
-    layout.struts.bottom = 8;
-    layout.struts.top = 8;
+    # Colors here are fallbacks: the Noctalia "niri" template (rendered to
+    # ~/.config/niri/noctalia.kdl and pulled in by the trailing `include` below)
+    # overrides focus-ring/border/shadow colors at runtime. enable/width stay.
+    layout.focus-ring = {
+      enable = true;
+      width  = 0.5;
+    };
+    layout.struts.bottom = 4;
+    layout.struts.top = 4;
     layout.shadow = baseShadow;
 
     input.touchpad = {
@@ -110,10 +120,10 @@ in
     window-rules = [
       { # Rounded + clipped corners for all windows (Noctalia compat)
         geometry-corner-radius = {
-          top-left = 20.0;
-          top-right = 20.0;
-          bottom-left = 20.0;
-          bottom-right = 20.0;
+          top-left = 15.0;
+          top-right = 15.0;
+          bottom-left = 15.0;
+          bottom-right = 15.0;
         };
         clip-to-geometry = true;
       }
@@ -170,8 +180,8 @@ in
       { # Noctalia Settings
         matches = [ { app-id = "^dev\\.noctalia\\.Noctalia\\.Settings$"; } ];
         open-floating = true;
-        default-column-width = { fixed = 1080; };
-        default-window-height = { fixed = 920; };
+        default-column-width = { fixed = 540; };
+        default-window-height = { fixed = 460; };
       }
     ];
 
@@ -299,6 +309,20 @@ in
     };
   };
 
+  # Append Noctalia's niri theme include to the niri-flake-generated config.kdl.
+  # `optional=true` keeps `niri validate` happy at build time (Noctalia writes
+  # ~/.config/niri/noctalia.kdl only at runtime). The include is positional-last
+  # so the template's colors win; Noctalia's apply.sh sees the line already
+  # present and never tries to write to the read-only config.kdl symlink.
+  xdg.configFile.niri-config.source = lib.mkForce (
+    inputs.niri.lib.internal.validated-config-for pkgs config.programs.niri.package (
+      config.programs.niri.finalConfig + ''
+
+        include optional=true "noctalia.kdl"
+      ''
+    )
+  );
+
   # ── Noctalia shell ───────────────────────────────────────────────────────
   programs.noctalia = {
     enable = true;
@@ -314,7 +338,7 @@ in
         # into the Zen profile's chrome CSS).
         templates = {
           enable_builtin_templates   = true;
-          builtin_ids                = [ "gtk3" "gtk4" "qt" "ghostty" ];
+          builtin_ids                = [ "gtk3" "gtk4" "qt" "ghostty" "niri" ];
           enable_community_templates = true;
           community_ids              = [ "zen-browser" ];
         };
@@ -326,22 +350,41 @@ in
       };
 
       bar.main = {
-        position    = "top";
-        enabled     = true;
-        margin_ends = 10;
+        position = "top";
+        enabled  = true;
         start  = [ "launcher" "workspaces" ];
         center = [ "notifications" "clock" "weather" ];
-        end    = [ "tray" "clipboard" "network" "bluetooth" "volume" "battery" "session" ];
+        end    = [ "tray" "clipboard" "network" "bluetooth" "volume" "battery" ];
+        # Flat bar restyle
+        capsule         = true;
+        capsule_opacity = 0.0;
+        capsule_border  = "secondary";
+        capsule_radius  = 0;
+        color           = "secondary";
+        thickness       = 36;
+        padding         = 4;
+        widget_spacing  = 4;
+        radius          = 0;
+        shadow          = false;
+        margin_ends     = 0;
+        margin_edge     = 0;
       };
 
       shell = {
         font_family = "Adwaita Sans";
         settings_show_advanced = true;
+        app_icon_colorize = true;
         panel = {
           session_placement = "centered";
-          transparency_mode = "glass";
+          transparency_mode = "solid";
+          control_center_placement = "floating";
+          open_near_click_control_center = true;
+          shadow = false;
         };
+        shadow.alpha = 0.0;
       };
+
+      control_center.sidebar_section = "none";
 
       location.auto_locate  = true;
       nightlight.enabled    = true;
@@ -351,7 +394,8 @@ in
       widget = {
         battery       = { hide_when_full = true; show_label = false; };
         brightness.show_label = false;
-        clock         = { anchor = true; format = "{:%l:%M %P}"; };
+        clock         = { anchor = false; format = "{:%l:%M %P}"; };
+        network.show_label = false;
         notifications.hide_when_no_unread = true;
         tray.drawer   = true;
         volume.show_label = false;

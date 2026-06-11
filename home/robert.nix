@@ -17,6 +17,11 @@
         "Pictures"
         "Projects"
         ".config/noctalia"
+        # Persist the Noctalia community template + its rendered output so Zen
+        # theming survives reboots (the cache is otherwise wiped, and the
+        # startup re-fetch races with — and loses to — network bring-up).
+        ".cache/noctalia/community-templates"
+        ".cache/noctalia/zen-browser"
         ".config/niri"
         ".config/zen"
         ".config/ghostty"
