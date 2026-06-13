@@ -39,6 +39,48 @@ let
       done
   '';
 
+  # Neovim theming template (input). Noctalia substitutes {{colors.<token>...}}
+  # and writes the result to the output_path below; editor.nix loads it via the
+  # base16-nvim plugin. Tokens are restricted to those the shipped `helix` builtin
+  # template uses, so they are guaranteed to render for the custom palette.
+  nvimThemeLua = pkgs.writeText "noctalia.lua" ''
+    require('base16-colorscheme').setup({
+      base00 = '{{colors.surface.default.hex}}',
+      base01 = '{{colors.surface_container.default.hex}}',
+      base02 = '{{colors.surface_container_high.default.hex}}',
+      base03 = '{{colors.outline.default.hex}}',
+      base04 = '{{colors.on_surface_variant.default.hex}}',
+      base05 = '{{colors.on_surface.default.hex}}',
+      base06 = '{{colors.on_surface.default.hex}}',
+      base07 = '{{colors.on_background.default.hex}}',
+      base08 = '{{colors.error.default.hex}}',
+      base09 = '{{colors.tertiary.default.hex}}',
+      base0A = '{{colors.secondary.default.hex}}',
+      base0B = '{{colors.primary.default.hex}}',
+      base0C = '{{colors.tertiary_container.default.hex}}',
+      base0D = '{{colors.primary_container.default.hex}}',
+      base0E = '{{colors.secondary_container.default.hex}}',
+      base0F = '{{colors.error_container.default.hex}}',
+    })
+
+    local hi = function(group, opts) vim.api.nvim_set_hl(0, group, opts) end
+    hi('TelescopeNormal',       { fg = '{{colors.on_surface.default.hex}}',         bg = '{{colors.surface.default.hex}}' })
+    hi('TelescopeBorder',       { fg = '{{colors.outline.default.hex}}',            bg = '{{colors.surface.default.hex}}' })
+    hi('TelescopePromptPrefix', { fg = '{{colors.primary.default.hex}}',            bg = '{{colors.surface.default.hex}}' })
+    hi('TelescopePromptTitle',  { fg = '{{colors.surface.default.hex}}',            bg = '{{colors.primary.default.hex}}' })
+    hi('TelescopeResultsTitle', { fg = '{{colors.surface.default.hex}}',            bg = '{{colors.tertiary.default.hex}}' })
+    hi('TelescopeSelection',    { fg = '{{colors.on_surface.default.hex}}',         bg = '{{colors.surface_container_high.default.hex}}' })
+    hi('TelescopeMatching',     { fg = '{{colors.primary.default.hex}}',            bold = true })
+  '';
+
+  # Live-reload running nvim instances after the template re-renders. Unlike the
+  # upstream community apply.sh, this makes no lazy.nvim assumptions and never
+  # touches init.lua (a read-only nix-store symlink under nixvim).
+  nvimThemeApply = pkgs.writeShellScript "nvim-theme-apply.sh" ''
+    set -euo pipefail
+    pkill -SIGUSR1 nvim 2>/dev/null || true
+  '';
+
   baseShadow = {
     enable = true;
     softness = 10;
@@ -365,6 +407,13 @@ in
             input_path  = "${zenBgFixCss}";
             output_path = "$XDG_CACHE_HOME/noctalia/zen-browser/zen-userChrome-bgfix.css";
             post_hook   = "bash '${zenBgFixApply}'";
+          };
+          # Neovim base16 colorscheme (see nvimTheme* in the let block; loaded by
+          # editor.nix via base16-nvim).
+          user.neovim = {
+            input_path  = "${nvimThemeLua}";
+            output_path = "$XDG_CACHE_HOME/noctalia/nvim/noctalia.lua";
+            post_hook   = "bash '${nvimThemeApply}'";
           };
         };
       };
