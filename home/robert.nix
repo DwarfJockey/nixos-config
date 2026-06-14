@@ -22,9 +22,6 @@
         # startup re-fetch races with — and loses to — network bring-up).
         ".cache/noctalia/community-templates"
         ".cache/noctalia/zen-browser"
-        # Rendered Neovim base16 theme (user.neovim template); persist so nvim is
-        # styled on first launch after reboot instead of waiting for a re-render.
-        ".cache/noctalia/nvim"
         ".config/niri"
         ".config/zen"
         ".config/ghostty"

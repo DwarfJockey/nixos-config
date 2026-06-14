@@ -1,4 +1,4 @@
-{ inputs, pkgs, ... }:
+{ inputs, ... }:
 
 {
   imports = [ inputs.nixvim.homeModules.nixvim ];
@@ -12,31 +12,6 @@
     # in flake.nix) to avoid a second nixpkgs. Set the source explicitly to acknowledge
     # that and silence nixvim's "source affected by follows" warning.
     nixpkgs.source = inputs.nixpkgs;
-
-    # ── Theme ──────────────────────────────────────────────────────────────────
-    # Colors come from Noctalia's Framework palette: the `user.neovim` template
-    # (modules/home-manager/desktop.nix) renders a base16 colorscheme into
-    # $XDG_CACHE_HOME/noctalia/nvim/noctalia.lua, which we load below. base16-nvim
-    # has no nixvim wrapper module, so it's added raw.
-    extraPlugins = [ pkgs.vimPlugins.base16-nvim ];
-
-    extraConfigLua = ''
-      -- Load (or reload) the Noctalia-rendered base16 colorscheme. A missing file
-      -- is a silent no-op so nvim never errors if it starts before Noctalia has
-      -- rendered the theme (first boot); persistence makes that a one-time gap.
-      _G.noctalia_load_theme = function()
-        local cache = vim.env.XDG_CACHE_HOME or (vim.env.HOME .. "/.cache")
-        local path = cache .. "/noctalia/nvim/noctalia.lua"
-        local chunk = loadfile(path)
-        if chunk then pcall(chunk) end
-      end
-
-      _G.noctalia_load_theme()
-
-      -- Live reload: the template's apply.sh sends SIGUSR1 to running nvim.
-      local signal = vim.uv.new_signal()
-      signal:start("sigusr1", vim.schedule_wrap(_G.noctalia_load_theme))
-    '';
 
     opts = {
       number         = true;
