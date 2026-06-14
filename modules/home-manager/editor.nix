@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ inputs, pkgs, ... }:
 
 {
   imports = [ inputs.nixvim.homeModules.nixvim ];
@@ -12,6 +12,21 @@
     # in flake.nix) to avoid a second nixpkgs. Set the source explicitly to acknowledge
     # that and silence nixvim's "source affected by follows" warning.
     nixpkgs.source = inputs.nixpkgs;
+
+    # ── Theme ──────────────────────────────────────────────────────────────────
+    # Colors come from Noctalia's Framework palette via the `nvim-base16` user
+    # template (modules/home-manager/desktop.nix), which renders a base16 module to
+    # ~/.config/nvim/lua/matugen.lua (it brings its own SIGUSR1 reload handler).
+    # base16-nvim provides the `base16-colorscheme` it requires; no nixvim wrapper.
+    extraPlugins = [ pkgs.vimPlugins.base16-nvim ];
+
+    # Apply the rendered theme at startup. Guarded (the doc uses a bare require):
+    # before the first render the module doesn't exist, and ~/.config/nvim is wiped
+    # each boot by impermanence, so a hard require would error.
+    extraConfigLua = ''
+      local ok, matugen = pcall(require, 'matugen')
+      if ok then matugen.setup() end
+    '';
 
     opts = {
       number         = true;

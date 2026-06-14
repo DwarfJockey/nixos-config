@@ -39,6 +39,51 @@ let
       done
   '';
 
+  # Neovim theming, per https://docs.noctalia.dev/v4/theming/program-specific/neovim/
+  # Noctalia renders this (substituting {{colors.*}}) to ~/.config/nvim/lua/matugen.lua;
+  # editor.nix's base16-nvim loads it via require('matugen').setup(); the post_hook
+  # `pkill -SIGUSR1 nvim` triggers the handler below to hot-reload. Vendored verbatim
+  # from the doc.
+  matugenTemplate = pkgs.writeText "matugen-template.lua" ''
+    local M = {}
+
+    function M.setup()
+      require('base16-colorscheme').setup {
+        -- Background tones
+        base00 = '{{colors.surface.default.hex}}', -- Default Background
+        base01 = '{{colors.surface_container.default.hex}}', -- Lighter Background (status bars)
+        base02 = '{{colors.surface_container_high.default.hex}}', -- Selection Background
+        base03 = '{{colors.outline.default.hex}}', -- Comments, Invisibles
+        -- Foreground tones
+        base04 = '{{colors.on_surface_variant.default.hex}}', -- Dark Foreground (status bars)
+        base05 = '{{colors.on_surface.default.hex}}', -- Default Foreground
+        base06 = '{{colors.on_surface.default.hex}}', -- Light Foreground
+        base07 = '{{colors.on_background.default.hex}}', -- Lightest Foreground
+        -- Accent colors
+        base08 = '{{colors.error.default.hex}}', -- Variables, XML Tags, Errors
+        base09 = '{{colors.tertiary.default.hex}}', -- Integers, Constants
+        base0A = '{{colors.secondary.default.hex}}', -- Classes, Search Background
+        base0B = '{{colors.primary.default.hex}}', -- Strings, Diff Inserted
+        base0C = '{{colors.tertiary_fixed_dim.default.hex}}', -- Regex, Escape Chars
+        base0D = '{{colors.primary_fixed_dim.default.hex}}', -- Functions, Methods
+        base0E = '{{colors.secondary_fixed_dim.default.hex}}', -- Keywords, Storage
+        base0F = '{{colors.error_container.default.hex}}', -- Deprecated, Embedded Tags
+      }
+    end
+
+    -- Register a signal handler for SIGUSR1 (matugen updates)
+    local signal = vim.uv.new_signal()
+    signal:start(
+      'sigusr1',
+      vim.schedule_wrap(function()
+        package.loaded['matugen'] = nil
+        require('matugen').setup()
+      end)
+    )
+
+    return M
+  '';
+
   baseShadow = {
     enable = true;
     softness = 10;
@@ -340,10 +385,20 @@ in
         // Background blur (niri 26.4+). Appended as raw KDL because niri-flake's
         // typed settings don't expose `background-effect` yet. xray is false on all
         // background blurs so the blur samples the windows behind, not the wallpaper.
+        // Ghostty: opt the window into blur. The Noctalia panels request blur via the
+        // ext-background-effect protocol (xray defaults to on), so this layer-rule
+        // turns xray off for them.
         window-rule {
-            match app-id="kitty"
+            match app-id="com.mitchellh.ghostty"
             background-effect {
                 blur true
+                xray false
+            }
+        }
+
+        layer-rule {
+            match namespace="^noctalia-"
+            background-effect {
                 xray false
             }
         }
@@ -365,9 +420,9 @@ in
         mode = "dark";
         source = "custom";
         custom_palette = "Framework";
-        # App theming: render Noctalia's palette into GTK/Qt/Ghostty configs,
-        # plus the community Zen Browser template (its apply.sh injects @imports
-        # into the Zen profile's chrome CSS).
+        # App theming: render Noctalia's palette into GTK/Qt/Ghostty configs, the
+        # community Zen Browser template (its apply.sh injects @imports into the Zen
+        # profile's chrome CSS), and a Neovim base16 template (see matugenTemplate).
         templates = {
           enable_builtin_templates   = true;
           builtin_ids                = [ "gtk3" "gtk4" "qt" "ghostty" "niri" ];
@@ -378,6 +433,13 @@ in
             input_path  = "${zenBgFixCss}";
             output_path = "$XDG_CACHE_HOME/noctalia/zen-browser/zen-userChrome-bgfix.css";
             post_hook   = "bash '${zenBgFixApply}'";
+          };
+          # Neovim theming (see matugenTemplate in the let block; loaded by editor.nix
+          # via base16-nvim). Renders into the nixvim-managed config dir; persisted.
+          user."nvim-base16" = {
+            input_path  = "${matugenTemplate}";
+            output_path = "$XDG_CONFIG_HOME/nvim/lua/matugen.lua";
+            post_hook   = "pkill -SIGUSR1 nvim";
           };
         };
       };
@@ -395,16 +457,17 @@ in
         enabled  = true;
         start  = [ "launcher" "workspaces" ];
         center = [ "notifications" "clock" "weather" ];
-        end    = [ "tray" "clipboard" "network" "bluetooth" "volume" "battery" ];
+        end    = [ "tray" "clipboard" "volume" "bluetooth" "network" "battery" ];
         # Flat bar restyle
-        capsule         = true;
-        capsule_opacity = 0.0;
-        capsule_border  = "secondary";
-        capsule_radius  = 0;
-        color           = "secondary";
-        thickness       = 36;
-        padding         = 4;
-        widget_spacing  = 4;
+        capsule            = false;
+        capsule_opacity    = 0.0;
+        capsule_border     = "secondary";
+        capsule_radius     = 0;
+        color              = "secondary";
+        thickness          = 36;
+        background_opacity = 0.75;
+        padding            = 10;
+        widget_spacing     = 10;
         radius          = 0;
         shadow          = false;
         margin_ends     = 0;
@@ -417,7 +480,7 @@ in
         app_icon_colorize = true;
         panel = {
           session_placement = "centered";
-          transparency_mode = "solid";
+          transparency_mode = "glass";
           control_center_placement = "floating";
           open_near_click_control_center = true;
           shadow = false;
@@ -526,6 +589,9 @@ in
     settings = {
       # Colors come from the Noctalia "ghostty" template (writes ~/.config/ghostty/themes/noctalia).
       theme = "noctalia";
+      # Translucent background so niri's window-rule blur is visible behind it
+      # (niri blurs through transparent pixels; an opaque window shows no blur).
+      background-opacity = 0.8;
       font-family = "FiraCode Nerd Font";
       font-size = 11;
       keybind = [

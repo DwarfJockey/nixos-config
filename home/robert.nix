@@ -22,6 +22,11 @@
         # startup re-fetch races with — and loses to — network bring-up).
         ".cache/noctalia/community-templates"
         ".cache/noctalia/zen-browser"
+        # Rendered Neovim base16 module (nvim-base16 template writes
+        # ~/.config/nvim/lua/matugen.lua). Persist so it survives the ephemeral
+        # root: nvim loads it at startup (registering matugen's SIGUSR1 handler)
+        # rather than racing Noctalia's re-render. nixvim puts nothing under lua/.
+        ".config/nvim/lua"
         ".config/niri"
         ".config/zen"
         ".config/ghostty"
