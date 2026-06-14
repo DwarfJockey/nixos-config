@@ -19,7 +19,9 @@
     };
 
     noctalia = {
-      url = "github:noctalia-dev/noctalia-shell/v5";
+      # Repo was renamed noctalia-shell -> noctalia; the v5 tag/branch was dropped
+      # in the restructure, so track the default branch (v5 line) per upstream docs.
+      url = "github:noctalia-dev/noctalia";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
