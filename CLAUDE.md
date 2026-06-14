@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 NixOS flake configuration for a Framework 13 laptop (12th gen Intel). Single host (`framework-13`), single user (`robert`). Uses an ephemeral root filesystem (tmpfs) with impermanence for persistent state under `/persist`.
 
-Repo: `github.com/DwarfJockey/nixos-config`. The `framework-13` host is tied to specific 12th-gen Intel Framework 13 hardware (disk UUIDs in `hardware-configuration.nix`); cloning to different hardware requires a new host entry.
+Repo: `github.com/DwarfJockey/nixos-config`. The `framework-13` host is tied to specific 12th-gen Intel Framework 13 hardware (disk device path in `disko.nix`, hardware quirks in `hardware-configuration.nix`); cloning to different hardware requires a new host entry.
 
 ## Build Commands
 
@@ -17,8 +17,8 @@ sudo nixos-rebuild switch --flake .#framework-13
 # Test without making it the boot default
 sudo nixos-rebuild test --flake .#framework-13
 
-# Build without activating (dry check)
-sudo nixos-rebuild build --flake .#framework-13
+# Build without activating (dry check; no sudo needed)
+nixos-rebuild build --flake .#framework-13
 
 # Check flake validity
 nix flake check
@@ -47,7 +47,7 @@ nix flake update <input-name>
 
 **Impermanence:** Everything outside `/nix` and `/persist` is wiped on reboot. System persistence is declared in the host config (`environment.persistence."/persist"`). User persistence is in `home/robert.nix` (`home.persistence."/persist"`). When adding new stateful paths, they must be added to the appropriate persistence config.
 
-**Theming:** Noctalia owns colors via a custom "Framework" palette (graphite neutrals, Framework orange, lavender accent) defined in `modules/home-manager/framework-palette.nix` and registered with `programs.noctalia.customPalettes.Framework` in `desktop.nix`. Noctalia renders these into app configs through its app-theming templates (`programs.noctalia.settings.theme.templates`, builtin IDs `gtk3`/`gtk4`/`qt`/`ghostty`). The palette also feeds niri's focus-ring colors directly (`desktop.nix` imports `framework-palette.nix`). System fonts live in `modules/nixos/theming.nix`; cursor (phinger-dark), icons (Papirus-Dark), GTK (adw-gtk3-dark), and Qt (qtct) base themes are set in `modules/home-manager/desktop.nix`.
+**Theming:** Noctalia owns colors via a custom "Framework" palette (graphite neutrals, Framework orange, lavender accent) defined in `modules/home-manager/framework-palette.nix` and registered with `programs.noctalia.customPalettes.Framework` in `desktop.nix`. Noctalia renders these into app configs through its app-theming templates (`programs.noctalia.settings.theme.templates`): builtin (`gtk3`/`gtk4`/`qt`/`ghostty`/`niri`), community (`zen-browser`), and user templates (`zen_browser_bgfix`; `nvim-base16` — see Editor). niri's focus-ring/border colors are rendered at runtime by Noctalia's `niri` template into `~/.config/niri/noctalia.kdl`, which the generated config `include`s. System fonts live in `modules/nixos/theming.nix`; cursor (phinger-dark), icons (Papirus-Dark), GTK (adw-gtk3-dark), and Qt (qtct) base themes are set in `modules/home-manager/desktop.nix`.
 
 **Home Manager:** Integrated as a NixOS module via `home-manager.nixosModules.home-manager` in the flake. User config is imported with `home-manager.users.robert`.
 
@@ -55,9 +55,13 @@ nix flake update <input-name>
 
 **Wallpaper:** A static PNG is vendored in the repo at `modules/home-manager/wallpapers/framework-pro-7.png` and referenced directly by Noctalia (`settings.wallpaper.default.path` in `desktop.nix`). It is vendored rather than generated so it survives the ephemeral root, since the GUI/runtime wallpaper state under `~/.local/state/noctalia` is not persisted. Cycling is disabled.
 
-**Editor:** Nixvim with LSP servers for Nix (nixd), Lua, Rust, TypeScript, Python, and Bash.
+**Editor:** Nixvim with LSP servers for Nix (nixd), Lua, Rust, TypeScript, Python, and Bash. Themed from the Framework palette via Noctalia's base16/matugen approach: the `nvim-base16` user template renders `~/.config/nvim/lua/matugen.lua`, loaded by the `base16-nvim` plugin (`editor.nix`).
 
-**Secrets:** agenix encrypts secrets to the host's SSH host key. Edit recipients in `secrets/secrets.nix`; create/edit a secret with `nix run github:ryantm/agenix -- -e <name>.age` from inside `secrets/`. Decryption happens early at boot — `age.identityPaths` in `modules/nixos/users.nix` points at `/persist/etc/ssh/ssh_host_ed25519_key`.
+**niri config generation:** The niri config is built from niri-flake's typed `programs.niri.settings`, but that module doesn't expose everything the niri binary supports (e.g. `background-effect`/blur). Such features — and the `noctalia.kdl` include — are appended as **raw KDL** to `config.programs.niri.finalConfig` inside the `validated-config-for` call in `desktop.nix`. Add niri features the typed module lacks there, not in `settings`.
+
+**Noctalia settings (declarative vs runtime):** `programs.noctalia.settings` writes the declarative `~/.config/noctalia/config.toml` (persisted). The Noctalia GUI writes to `~/.local/state/noctalia/settings.toml`, which is **not** persisted (wiped on reboot). GUI changes must be ported back into `desktop.nix` to survive.
+
+**Secrets:** agenix encrypts secrets to the host's SSH host key. Edit recipients in `secrets/secrets.nix`; create/edit a secret with `nix run github:ryantm/agenix -- -e <name>.age` from inside `secrets/`. Decryption happens early at boot — `age.identityPaths` in `modules/nixos/users.nix` points at `/persist/etc/ssh/ssh_host_ed25519_key`. Git's `user.name`/`user.email` are **not** in `shell.nix`; they come from the `git-identity` secret, decrypted to `/run/agenix/git-identity` and pulled in via `programs.git.includes`.
 
 ## Conventions
 

@@ -6,7 +6,7 @@
     networkmanager.enable = true;
   };
 
-  # ── Network discovery (Nautilus) ──────────────────────────────────────────
+  # Network discovery (Nautilus)
   services.avahi = {
     enable = true;
     nssmdns4 = true;

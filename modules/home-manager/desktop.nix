@@ -3,9 +3,6 @@
 let
   noctaliaPkg = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
-  # Active (dark) Framework palette — single source for niri's focus-ring colors.
-  palette = (import ./framework-palette.nix).dark;
-
   # Noctalia issue #2687: the community zen-browser template leaves black/grey
   # bars on the window's background edges. Zen sets --zen-main-browser-background
   # on the #zen-browser-background element (out-specificity-ing the template's
@@ -42,8 +39,8 @@ let
   # Neovim theming, per https://docs.noctalia.dev/v4/theming/program-specific/neovim/
   # Noctalia renders this (substituting {{colors.*}}) to ~/.config/nvim/lua/matugen.lua;
   # editor.nix's base16-nvim loads it via require('matugen').setup(); the post_hook
-  # `pkill -SIGUSR1 nvim` triggers the handler below to hot-reload. Vendored verbatim
-  # from the doc.
+  # `pkill -SIGUSR1 nvim` triggers the handler below to hot-reload. Adapted from the
+  # doc (plus a local background-clearing pass for terminal transparency).
   matugenTemplate = pkgs.writeText "matugen-template.lua" ''
     local M = {}
 
@@ -69,6 +66,15 @@ let
         base0E = '{{colors.secondary_fixed_dim.default.hex}}', -- Keywords, Storage
         base0F = '{{colors.error_container.default.hex}}', -- Deprecated, Embedded Tags
       }
+
+      -- Clear backgrounds so the (translucent, niri-blurred) terminal shows
+      -- through. `:highlight` is a partial update, so each group keeps its fg.
+      for _, group in ipairs {
+        'Normal', 'NormalNC', 'NormalFloat', 'FloatBorder',
+        'SignColumn', 'LineNr', 'EndOfBuffer',
+      } do
+        vim.cmd('highlight ' .. group .. ' guibg=NONE ctermbg=NONE')
+      end
     end
 
     -- Register a signal handler for SIGUSR1 (matugen updates)
@@ -117,11 +123,14 @@ in
     inputs.noctalia.homeModules.default
   ];
 
-  # ── Niri ───────────────────────────────────────────────────────────────────
+  # Niri
   programs.niri.settings = {
     outputs."eDP-1".scale = 2.0;
 
     hotkey-overlay.skip-at-startup = true;
+
+    # Ask clients to omit their own titlebars/decorations (server-side instead).
+    prefer-no-csd = true;
 
     # Noctalia compat: lets Noctalia panels grab focus reliably.
     debug.honor-xdg-activation-with-invalid-serial = [];
@@ -167,6 +176,7 @@ in
           { namespace = "^noctalia-backdrop"; }
           { namespace = "^noctalia-wallpaper"; }
         ];
+        opacity = 0.8;
         shadow = popupShadow;
         geometry-corner-radius = {
           bottom-left = 10.0;
@@ -258,22 +268,22 @@ in
     };
 
     binds = {
-      # ── Core Noctalia binds ────────────────────────────────────────────────
+      # Core Noctalia binds
       "Mod+Space".action.spawn = ["noctalia" "msg" "panel-toggle" "launcher"];
       "Mod+S".action.spawn     = ["noctalia" "msg" "panel-toggle" "control-center"];
       "Mod+Comma".action.spawn = ["noctalia" "msg" "settings-toggle"];
 
-      # ── Session ────────────────────────────────────────────────────────────
+      # Session
       "Mod+Shift+E".action.quit.skip-confirmation = true;
       "Mod+Shift+P".action.power-off-monitors     = [];
       "Super+L".action.spawn = ["noctalia" "msg" "session" "lock"];
 
-      # ── Apps ───────────────────────────────────────────────────────────────
+      # Apps
       "Mod+T".action.spawn      = "ghostty";
       "Mod+B".action.spawn      = "zen-twilight";
       "Mod+E".action.spawn      = "nautilus";
 
-      # ── Windows ────────────────────────────────────────────────────────────
+      # Windows
       "Mod+Q".action.close-window                                   = [];
       "Mod+F".action.maximize-column                                = [];
       "Mod+Shift+F".action.fullscreen-window                        = [];
@@ -283,7 +293,7 @@ in
       "Mod+V".action.toggle-window-floating                         = [];
       "Mod+Shift+V".action.switch-focus-between-floating-and-tiling = [];
 
-      # ── Focus column/window ────────────────────────────────────────────────
+      # Focus column/window
       "Mod+Left".action.focus-column-left   = [];
       "Mod+Right".action.focus-column-right = [];
       "Mod+Down".action.focus-window-down   = [];
@@ -295,13 +305,13 @@ in
       "Mod+Home".action.focus-column-first  = [];
       "Mod+End".action.focus-column-last    = [];
 
-      # ── Focus monitor ──────────────────────────────────────────────────────
+      # Focus monitor
       "Mod+Shift+Left".action.focus-monitor-left   = [];
       "Mod+Shift+Right".action.focus-monitor-right = [];
       "Mod+Shift+Up".action.focus-monitor-up       = [];
       "Mod+Shift+Down".action.focus-monitor-down   = [];
 
-      # ── Move column/window ─────────────────────────────────────────────────
+      # Move column/window
       "Mod+Ctrl+Left".action.move-column-left     = [];
       "Mod+Ctrl+Right".action.move-column-right   = [];
       "Mod+Ctrl+Down".action.move-window-down     = [];
@@ -313,20 +323,20 @@ in
       "Mod+Ctrl+Home".action.move-column-to-first = [];
       "Mod+Ctrl+End".action.move-column-to-last   = [];
 
-      # ── Move column to monitor ─────────────────────────────────────────────
+      # Move column to monitor
       "Mod+Ctrl+Shift+Left".action.move-column-to-monitor-left   = [];
       "Mod+Ctrl+Shift+Right".action.move-column-to-monitor-right = [];
       "Mod+Ctrl+Shift+Up".action.move-column-to-monitor-up       = [];
       "Mod+Ctrl+Shift+Down".action.move-column-to-monitor-down   = [];
 
-      # ── Column/window sizing ───────────────────────────────────────────────
+      # Column/window sizing
       "Mod+Minus".action.set-column-width        = "-10%";
       "Mod+Equal".action.set-column-width        = "+10%";
       "Mod+Shift+Minus".action.set-window-height = "-10%";
       "Mod+Shift+Equal".action.set-window-height = "+10%";
       "Mod+R".action.reset-window-height         = [];
 
-      # ── Workspaces ─────────────────────────────────────────────────────────
+      # Workspaces
       "Mod+Tab".action.focus-workspace-previous          = [];
       "Mod+U".action.focus-workspace-down                = [];
       "Mod+I".action.focus-workspace-up                  = [];
@@ -353,21 +363,21 @@ in
       "Mod+Ctrl+8".action.move-column-to-workspace = 8;
       "Mod+Ctrl+9".action.move-column-to-workspace = 9;
 
-      # ── Overview ───────────────────────────────────────────────────────────
+      # Overview
       "Mod+Grave".action.toggle-overview = [];
 
-      # ── Screenshots (niri-native) ──────────────────────────────────────────
-      "Print".action.screenshot        = [];
+      # Screenshots (niri-native)
+      "Print".action.screenshot             = [];
       "Ctrl+Print".action.screenshot-screen = [];
-      "Alt+Print".action.screenshot-window   = [];
+      "Alt+Print".action.screenshot-window  = [];
 
-      # ── Audio (via Noctalia — shows OSD overlay) ───────────────────────────
+      # Audio (via Noctalia — shows OSD overlay)
       "XF86AudioRaiseVolume".action.spawn  = ["noctalia" "msg" "volume-up"];
       "XF86AudioLowerVolume".action.spawn  = ["noctalia" "msg" "volume-down"];
       "XF86AudioMute".action.spawn         = ["noctalia" "msg" "volume-mute"];
       "XF86AudioMicMute".action.spawn      = ["noctalia" "msg" "mic-mute"];
 
-      # ── Brightness (via Noctalia — shows OSD overlay) ──────────────────────
+      # Brightness (via Noctalia — shows OSD overlay)
       "XF86MonBrightnessUp".action.spawn   = ["noctalia" "msg" "brightness-up"];
       "XF86MonBrightnessDown".action.spawn = ["noctalia" "msg" "brightness-down"];
     };
@@ -408,13 +418,11 @@ in
     )
   );
 
-  # ── Noctalia shell ───────────────────────────────────────────────────────
+  # Noctalia shell
   programs.noctalia = {
     enable = true;
     package = noctaliaPkg;
-    # Strip the `ramps` attr (nvim base16 only) so Noctalia sees just dark/light.
-    customPalettes.Framework =
-      let fp = import ./framework-palette.nix; in { inherit (fp) dark light; };
+    customPalettes.Framework = import ./framework-palette.nix;
     settings = {
       theme = {
         mode = "dark";
@@ -465,13 +473,13 @@ in
         capsule_radius     = 0;
         color              = "secondary";
         thickness          = 36;
-        background_opacity = 0.75;
+        background_opacity = 0.8;
         padding            = 10;
         widget_spacing     = 10;
-        radius          = 0;
-        shadow          = false;
-        margin_ends     = 0;
-        margin_edge     = 0;
+        radius             = 0;
+        shadow             = false;
+        margin_ends        = 0;
+        margin_edge        = 0;
       };
 
       shell = {
@@ -512,7 +520,7 @@ in
     };
   };
 
-  # ── Zen Browser ────────────────────────────────────────────────────────────
+  # Zen Browser
   programs.zen-browser = {
     enable = true;
     nativeMessagingHosts = [ pkgs._1password-gui ];
@@ -557,7 +565,7 @@ in
     };
   };
 
-  # ── Cursor / icons / GTK / Qt ──────────────────────────────────────────────
+  # Cursor / icons / GTK / Qt
   # Base dark theme + assets. Noctalia's templates overlay accent colors on top
   # (gtk-3.0/4.0 noctalia.css, qt5ct/qt6ct color files).
   home.pointerCursor = {
@@ -583,7 +591,7 @@ in
     platformTheme.name = "qtct";
   };
 
-  # ── Ghostty ────────────────────────────────────────────────────────────────
+  # Ghostty
   programs.ghostty = {
     enable = true;
     settings = {
@@ -601,7 +609,7 @@ in
     };
   };
 
-  # ── Senpai ─────────────────────────────────────────────────────────────────
+  # Senpai
   programs.senpai = {
     enable = true;
     config = {

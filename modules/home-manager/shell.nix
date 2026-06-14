@@ -26,7 +26,7 @@ in
 {
   home.packages = [ claudeStatusline ];
 
-  # ── Nushell ────────────────────────────────────────────────────────────────
+  # Nushell
   programs.nushell = {
     enable = true;
     extraConfig = ''
@@ -63,16 +63,16 @@ in
     };
   };
 
-  # ── lsd ────────────────────────────────────────────────────────────────────
+  # lsd
   programs.lsd.enable = true;
 
-  # ── Carapace ───────────────────────────────────────────────────────────────
+  # Carapace
   programs.carapace = {
     enable = true;
     enableNushellIntegration = true;
   };
 
-  # ── Starship ───────────────────────────────────────────────────────────────
+  # Starship
   programs.starship = {
     enable = true;
     settings = {
@@ -170,13 +170,13 @@ in
     };
   };
 
-  # ── Git ────────────────────────────────────────────────────────────────────
+  # Git
   programs.git = {
     enable = true;
-    settings.user = {
-      name  = "robert";
-      email = "robert@example.com";
-    };
+    # Identity comes from an agenix secret at runtime (secrets/git-identity.age,
+    # registered in modules/nixos/users.nix) so name/email never live in repo
+    # source. git silently ignores the include if the path is absent.
+    includes = [ { path = "/run/agenix/git-identity"; } ];
     settings.credential."https://github.com".helper = "!gh auth git-credential";
   };
 }

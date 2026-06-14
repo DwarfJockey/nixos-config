@@ -3,7 +3,7 @@
 {
   imports = [ inputs.nixvim.homeModules.nixvim ];
 
-  # ── Nixvim ─────────────────────────────────────────────────────────────────
+  # Nixvim
   programs.nixvim = {
     enable = true;
     defaultEditor = true;
@@ -13,7 +13,7 @@
     # that and silence nixvim's "source affected by follows" warning.
     nixpkgs.source = inputs.nixpkgs;
 
-    # ── Theme ──────────────────────────────────────────────────────────────────
+    # Theme
     # Colors come from Noctalia's Framework palette via the `nvim-base16` user
     # template (modules/home-manager/desktop.nix), which renders a base16 module to
     # ~/.config/nvim/lua/matugen.lua (it brings its own SIGUSR1 reload handler).
@@ -113,16 +113,16 @@
 
     plugins = {
 
-      # ── Syntax highlighting ────────────────────────────────────────────────
+      # Syntax highlighting
       treesitter = {
         enable = true;
         settings = {
           highlight.enable = true;
-          indent.enable     = true;
+          indent.enable    = true;
         };
       };
 
-      # ── LSP ────────────────────────────────────────────────────────────────
+      # LSP
       lsp = {
         enable = true;
         servers = {
@@ -139,7 +139,7 @@
         };
       };
 
-      # ── Completion ─────────────────────────────────────────────────────────
+      # Completion
       cmp = {
         enable = true;
         settings = {
@@ -161,13 +161,13 @@
         };
       };
 
-      luasnip.enable   = true;
-      cmp_luasnip.enable = true;
+      luasnip.enable      = true;
+      cmp_luasnip.enable  = true;
       cmp-nvim-lsp.enable = true;
       cmp-buffer.enable   = true;
       cmp-path.enable     = true;
 
-      # ── Fuzzy finder ───────────────────────────────────────────────────────
+      # Fuzzy finder
       telescope = {
         enable = true;
         extensions.fzf-native.enable = true;
@@ -176,7 +176,7 @@
       # Explicit to suppress deprecation warning
       web-devicons.enable = true;
 
-      # ── File tree ──────────────────────────────────────────────────────────
+      # File tree
       neo-tree = {
         enable = true;
         settings = {
@@ -185,7 +185,7 @@
         };
       };
 
-      # ── Git ────────────────────────────────────────────────────────────────
+      # Git
       gitsigns = {
         enable = true;
         settings.signs = {

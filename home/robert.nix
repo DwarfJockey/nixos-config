@@ -9,7 +9,7 @@
       ../modules/home-manager/desktop.nix
     ];
 
-    # ── Impermanence ─────────────────────────────────────────────────────────
+    # Impermanence
     home.persistence."/persist" = {
       directories = [
         "Documents"
@@ -52,7 +52,7 @@
       ];
     };
 
-    # ── Packages ─────────────────────────────────────────────────────────────
+    # Packages
     home.packages = with pkgs; [
       nautilus
       celluloid
@@ -63,7 +63,7 @@
       gh
     ];
 
-    # ── Claude Code ──────────────────────────────────────────────────────────
+    # Claude Code
     # settings.json must be a real file so /effort, /model, etc. can mutate it.
     # Activation merges declarative fields into whatever the user has saved.
     home.activation.claudeSettings =

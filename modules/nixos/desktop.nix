@@ -4,13 +4,13 @@ let
   niriPkg = inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable;
 in
 {
-  # ── Niri ─────────────────────────────────────────────────────────────────
+  # Niri
   programs.niri = {
     enable = true;
     package = niriPkg;
   };
 
-  # ── Login (greetd autologin) ─────────────────────────────────────────────
+  # Login (greetd autologin)
   # Noctalia provides no greeter; log straight into a niri session. The disk is
   # not the security boundary on this host, so no password prompt at boot.
   services.greetd = {
@@ -21,7 +21,7 @@ in
     };
   };
 
-  # ── XDG Portal ───────────────────────────────────────────────────────────
+  # XDG Portal
   # xdg-desktop-portal-gtk serves the Settings portal interface, which allows
   # apps like Zen Browser to query the system color scheme (prefer-dark).
   # Without this, browsers fall back to light mode.
@@ -30,18 +30,18 @@ in
     extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
   };
 
-  # ── Hardware acceleration (Intel 12th gen) ───────────────────────────────
+  # Hardware acceleration (Intel 12th gen)
   hardware.graphics.extraPackages = [
     pkgs.intel-media-driver
     pkgs.libva-vdpau-driver
     pkgs.libvdpau-va-gl
   ];
 
-  # ── Power & thermal management ───────────────────────────────────────────
+  # Power & thermal management
   services.upower.enable = true;
   services.power-profiles-daemon.enable = true;
 
-  # ── Desktop services ─────────────────────────────────────────────────────
+  # Desktop services
   services.gvfs.enable = true;
   services.tumbler.enable = true;
 }

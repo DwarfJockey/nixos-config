@@ -4,8 +4,7 @@
 # a subtle lavender tint in both modes (no longer pure R=G=B). Accents still
 # carry the saturated color. Terminal colors follow the base16 ANSI mapping
 # (bright == normal except black/white). Consumed by Noctalia via
-# programs.noctalia.customPalettes (modules/home-manager/desktop.nix); the
-# `ramps` attr is consumed by the nvim base16 template in desktop.nix.
+# programs.noctalia.customPalettes (modules/home-manager/desktop.nix).
 let
   # ΔΦ*-even neutral ramps, dark/light background -> foreground.
   darkRamp  = [ "#191919" "#444347" "#63616B" "#7F7C8C" "#9894AA" "#B0ABC7" "#C7C0E4" "#DDD5FF" ];
@@ -108,8 +107,4 @@ in
       };
     };
   };
-
-  # Full ΔΦ*-even ramps (all 8 steps), consumed by the nvim base16 template
-  # (base00..base07) in desktop.nix. Stripped before reaching Noctalia.
-  ramps = { dark = darkRamp; light = lightRamp; };
 }

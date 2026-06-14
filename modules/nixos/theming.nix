@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 {
-  # ── Fonts ──────────────────────────────────────────────────────────────────
+  # Fonts
   # System font set + fontconfig defaults. Colors and shell theming are owned by
   # Noctalia (see modules/home-manager/desktop.nix); this module only provides
   # the font stack that used to come from Stylix.

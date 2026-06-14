@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 {
-  # ── 1Password ────────────────────────────────────────────────────────────
+  # 1Password
   programs._1password.enable = true;
   programs._1password-gui = {
     enable = true;
@@ -15,7 +15,7 @@
     mode = "0755";
   };
 
-  # ── Steam ────────────────────────────────────────────────────────────────
+  # Steam
   programs.steam = {
     enable = true;
     package = pkgs.steam.override {
