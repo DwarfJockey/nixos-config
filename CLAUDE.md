@@ -37,7 +37,7 @@ nix flake update <input-name>
 - `hosts/framework-13/default.nix` — Thin host entry. Imports the modules below plus host-only bits (locale, top-level packages, stateVersion).
 - `hosts/framework-13/{hardware-configuration,disko}.nix` — Disk layout, filesystems, kernel modules. Root is tmpfs; `/nix` and `/persist` are Btrfs subvolumes.
 - `modules/nixos/{boot,nix,networking,bluetooth,audio,desktop,theming,persistence,apps,users}.nix` — System-level NixOS modules, one concern each.
-- `modules/home-manager/{shell,editor,desktop,tomorrow-palette}.nix` — Home Manager modules imported by `home/robert.nix`. `tomorrow-palette.nix` is the single source of truth for colors (consumed by `desktop.nix`).
+- `modules/home-manager/{shell,editor,desktop}.nix` — Home Manager modules imported by `home/robert.nix`.
 - `home/robert.nix` — Home Manager entry point (persistence, packages, Claude Code settings). Imported as a NixOS module, not standalone.
 - `secrets/secrets.nix` + `secrets/*.age` — agenix recipients and encrypted secrets. Decrypted at boot via `/persist/etc/ssh/ssh_host_ed25519_key`.
 
@@ -47,7 +47,7 @@ nix flake update <input-name>
 
 **Impermanence:** Everything outside `/nix` and `/persist` is wiped on reboot. System persistence is declared in the host config (`environment.persistence."/persist"`). User persistence is in `home/robert.nix` (`home.persistence."/persist"`). When adding new stateful paths, they must be added to the appropriate persistence config.
 
-**Theming:** Noctalia owns colors via a custom "Tomorrow" palette (Chris Kempson's base16 Tomorrow scheme — Tomorrow Night for dark, Tomorrow for light: blue primary, aqua secondary, red tertiary/error) defined in `modules/home-manager/tomorrow-palette.nix` and registered with `programs.noctalia.customPalettes.Tomorrow` in `desktop.nix`. The palette encodes a base16 scheme: its `terminal.normal.{black..white}` slots are base00–07 and `terminal.bright.{black..white}` are base08–0F. Noctalia renders these into app configs through its app-theming templates (`programs.noctalia.settings.theme.templates`): builtin (`gtk3`/`gtk4`/`qt`/`ghostty`/`niri`), community (`zen-browser`), and user templates (`zen_browser_bgfix`; `nvim-base16` — see Editor). niri's focus-ring/border colors are rendered at runtime by Noctalia's `niri` template into `~/.config/niri/noctalia.kdl`, which the generated config `include`s. System fonts live in `modules/nixos/theming.nix`; cursor (phinger-dark), icons (Papirus-Dark), GTK (adw-gtk3-dark), and Qt (qtct) base themes are set in `modules/home-manager/desktop.nix`.
+**Theming:** Noctalia themes only its own UI (bar/panels/lock) from a built-in scheme — `programs.noctalia.settings.theme` in `desktop.nix` is set to `source = "builtin"`, `builtin = "Noctalia"`, `mode = "dark"`. There is **no** custom palette and **no** app-theming templates: external apps (GTK, Qt, Ghostty, niri, Zen, Neovim, Claude, starship) use their own defaults. Base appearance assets are still declared statically: system fonts in `modules/nixos/theming.nix`; cursor (phinger-dark), icons (Papirus-Dark), GTK (adw-gtk3-dark), and Qt (qtct) in `modules/home-manager/desktop.nix`. (Theming is intentionally a clean slate, to be rebuilt later.)
 
 **Home Manager:** Integrated as a NixOS module via `home-manager.nixosModules.home-manager` in the flake. User config is imported with `home-manager.users.robert`.
 
@@ -55,9 +55,9 @@ nix flake update <input-name>
 
 **Wallpaper:** A static PNG is vendored in the repo at `modules/home-manager/wallpapers/framework-pro-7.png` and referenced directly by Noctalia (`settings.wallpaper.default.path` in `desktop.nix`). It is vendored rather than generated so it survives the ephemeral root, since the GUI/runtime wallpaper state under `~/.local/state/noctalia` is not persisted. Cycling is disabled.
 
-**Editor:** Nixvim with LSP servers for Nix (nixd), Lua, Rust, TypeScript, Python, and Bash. Themed from the Tomorrow palette via Noctalia's base16/matugen approach: the `nvim-base16` user template renders `~/.config/nvim/lua/matugen.lua`, loaded by the `base16-nvim` plugin (`editor.nix`).
+**Editor:** Nixvim with LSP servers for Nix (nixd), Lua, Rust, TypeScript, Python, and Bash. No colorscheme is configured — nvim uses its default (`editor.nix`).
 
-**niri config generation:** The niri config is built from niri-flake's typed `programs.niri.settings`, but that module doesn't expose everything the niri binary supports (e.g. `background-effect`/blur). Such features — and the `noctalia.kdl` include — are appended as **raw KDL** to `config.programs.niri.finalConfig` inside the `validated-config-for` call in `desktop.nix`. Add niri features the typed module lacks there, not in `settings`.
+**niri config generation:** The niri config is built from niri-flake's typed `programs.niri.settings`, but that module doesn't expose everything the niri binary supports (e.g. `background-effect`/blur). Such features are appended as **raw KDL** to `config.programs.niri.finalConfig` inside the `validated-config-for` call in `desktop.nix`. Add niri features the typed module lacks there, not in `settings`.
 
 **Noctalia settings (declarative vs runtime):** `programs.noctalia.settings` writes the declarative `~/.config/noctalia/config.toml` (persisted). The Noctalia GUI writes to `~/.local/state/noctalia/settings.toml`, which is **not** persisted (wiped on reboot). GUI changes must be ported back into `desktop.nix` to survive.
 

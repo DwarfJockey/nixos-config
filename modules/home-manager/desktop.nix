@@ -3,93 +3,6 @@
 let
   noctaliaPkg = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
-  # Noctalia issue #2687: the community zen-browser template leaves black/grey
-  # bars on the window's background edges. Zen sets --zen-main-browser-background
-  # on the #zen-browser-background element (out-specificity-ing the template's
-  # :root rule) and also reads --zen-main-browser-background-old, which the
-  # template never sets. Paint both with --base (defined on `*` by the template,
-  # so this stays a static add-on — no Noctalia tokens needed).
-  zenBgFixCss = pkgs.writeText "zen-userChrome-bgfix.css" ''
-    #zen-browser-background {
-      --zen-main-browser-background: var(--base) !important;
-      --zen-main-browser-background-old: var(--base) !important;
-    }
-  '';
-
-  # Inject an @import of the rendered fix into each Zen profile's userChrome.css,
-  # mirroring the community template's apply.sh. Idempotent; the unique filename
-  # keeps the community sed cleanup (which matches zen-userChrome\.css) off our line.
-  zenBgFixApply = pkgs.writeShellScript "zen-bgfix-apply.sh" ''
-    set -euo pipefail
-    cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}"
-    css="$cache_dir/noctalia/zen-browser/zen-userChrome-bgfix.css"
-    line="@import \"$css\";"
-    find "''${XDG_CONFIG_HOME:-$HOME/.config}/zen" "$HOME/.zen" \
-      -mindepth 2 -maxdepth 2 -type d -name chrome 2>/dev/null |
-      while IFS= read -r dir; do
-        uc="$dir/userChrome.css"
-        touch "$uc"
-        if ! grep -Fq "$line" "$uc"; then
-          [ -s "$uc" ] && [ -n "$(tail -c1 "$uc")" ] && echo >>"$uc"
-          printf '%s\n' "$line" >>"$uc"
-        fi
-      done
-  '';
-
-  # Neovim theming, per https://docs.noctalia.dev/v4/theming/program-specific/neovim/
-  # Noctalia renders this (substituting {{colors.*}}) to ~/.config/nvim/lua/matugen.lua;
-  # editor.nix's base16-nvim loads it via require('matugen').setup(); the post_hook
-  # `pkill -SIGUSR1 nvim` triggers the handler below to hot-reload. Adapted from the
-  # doc (plus a local background-clearing pass for terminal transparency).
-  matugenTemplate = pkgs.writeText "matugen-template.lua" ''
-    local M = {}
-
-    function M.setup()
-      require('base16-colorscheme').setup {
-        -- Background tones
-        base00 = '{{colors.terminal_normal_black.default.hex}}', -- Default Background
-        base01 = '{{colors.terminal_normal_red.default.hex}}', -- Lighter Background (status bars)
-        base02 = '{{colors.terminal_normal_green.default.hex}}', -- Selection Background
-        base03 = '{{colors.terminal_normal_yellow.default.hex}}', -- Comments, Invisibles
-        -- Foreground tones
-        base04 = '{{colors.terminal_normal_blue.default.hex}}', -- Dark Foreground (status bars)
-        base05 = '{{colors.terminal_normal_magenta.hex}}', -- Default Foreground
-        base06 = '{{colors.terminal_normal_cyan.hex}}', -- Light Foreground
-        base07 = '{{colors.terminal_normal_white.hex}}', -- Lightest Foreground
-        -- Accent colors
-        base08 = '{{colors.terminal_bright_black.default.hex}}', -- Variables, XML Tags, Errors
-        base09 = '{{colors.terminal_bright_red.default.hex}}', -- Integers, Constants
-        base0A = '{{colors.terminal_bright_green.default.hex}}', -- Classes, Search Background
-        base0B = '{{colors.terminal_bright_yellow.default.hex}}', -- Strings, Diff Inserted
-        base0C = '{{colors.terminal_bright_blue.default.hex}}', -- Regex, Escape Chars
-        base0D = '{{colors.terminal_bright_magenta.default.hex}}', -- Functions, Methods
-        base0E = '{{colors.terminal_bright_cyan.default.hex}}', -- Keywords, Storage
-        base0F = '{{colors.terminal_bright_white.default.hex}}', -- Deprecated, Embedded Tags
-      }
-
-      -- Clear backgrounds so the (translucent, niri-blurred) terminal shows
-      -- through. `:highlight` is a partial update, so each group keeps its fg.
-      for _, group in ipairs {
-        'Normal', 'NormalNC', 'NormalFloat', 'FloatBorder',
-        'SignColumn', 'LineNr', 'EndOfBuffer',
-      } do
-        vim.cmd('highlight ' .. group .. ' guibg=NONE ctermbg=NONE')
-      end
-    end
-
-    -- Register a signal handler for SIGUSR1 (matugen updates)
-    local signal = vim.uv.new_signal()
-    signal:start(
-      'sigusr1',
-      vim.schedule_wrap(function()
-        package.loaded['matugen'] = nil
-        require('matugen').setup()
-      end)
-    )
-
-    return M
-  '';
-
   baseShadow = {
     enable = true;
     softness = 10;
@@ -129,9 +42,6 @@ in
 
     hotkey-overlay.skip-at-startup = true;
 
-    # Ask clients to omit their own titlebars/decorations (server-side instead).
-    prefer-no-csd = true;
-
     # Noctalia compat: lets Noctalia panels grab focus reliably.
     debug.honor-xdg-activation-with-invalid-serial = [];
 
@@ -145,9 +55,7 @@ in
     workspaces."1" = {};
 
     layout.border.enable = false;
-    # Colors here are fallbacks: the Noctalia "niri" template (rendered to
-    # ~/.config/niri/noctalia.kdl and pulled in by the trailing `include` below)
-    # overrides focus-ring/border/shadow colors at runtime. enable/width stay.
+    # focus-ring uses niri's default colors (no Noctalia theming).
     layout.focus-ring = {
       enable = true;
       width  = 0.5;
@@ -383,11 +291,8 @@ in
     };
   };
 
-  # Append Noctalia's niri theme include to the niri-flake-generated config.kdl.
-  # `optional=true` keeps `niri validate` happy at build time (Noctalia writes
-  # ~/.config/niri/noctalia.kdl only at runtime). The include is positional-last
-  # so the template's colors win; Noctalia's apply.sh sees the line already
-  # present and never tries to write to the read-only config.kdl symlink.
+  # Append raw KDL that niri-flake's typed settings don't expose to the
+  # niri-flake-generated config.kdl.
   xdg.configFile.niri-config.source = lib.mkForce (
     inputs.niri.lib.internal.validated-config-for pkgs config.programs.niri.package (
       config.programs.niri.finalConfig + ''
@@ -395,16 +300,6 @@ in
         // Background blur (niri 26.4+). Appended as raw KDL because niri-flake's
         // typed settings don't expose `background-effect` yet. xray is false on all
         // background blurs so the blur samples the windows behind, not the wallpaper.
-        // Ghostty: opt the window into blur. The Noctalia panels request blur via the
-        // ext-background-effect protocol (xray defaults to on), so this layer-rule
-        // turns xray off for them.
-        window-rule {
-            match app-id="com.mitchellh.ghostty"
-            background-effect {
-                blur true
-                xray false
-            }
-        }
 
         layer-rule {
             match namespace="^noctalia-"
@@ -412,8 +307,6 @@ in
                 xray false
             }
         }
-
-        include optional=true "noctalia.kdl"
       ''
     )
   );
@@ -422,34 +315,13 @@ in
   programs.noctalia = {
     enable = true;
     package = noctaliaPkg;
-    customPalettes.Tomorrow = import ./tomorrow-palette.nix;
     settings = {
+      # Noctalia themes only its own UI from a built-in scheme. No custom palette
+      # and no app-theming templates — external apps use their own defaults.
       theme = {
-        mode = "dark";
-        source = "custom";
-        custom_palette = "Tomorrow";
-        # App theming: render Noctalia's palette into GTK/Qt/Ghostty configs, the
-        # community Zen Browser template (its apply.sh injects @imports into the Zen
-        # profile's chrome CSS), and a Neovim base16 template (see matugenTemplate).
-        templates = {
-          enable_builtin_templates   = true;
-          builtin_ids                = [ "gtk3" "gtk4" "qt" "ghostty" "niri" ];
-          enable_community_templates = true;
-          community_ids              = [ "zen-browser" ];
-          # Issue #2687 fix — add-on user template (see zenBgFix* in the let block).
-          user.zen_browser_bgfix = {
-            input_path  = "${zenBgFixCss}";
-            output_path = "$XDG_CACHE_HOME/noctalia/zen-browser/zen-userChrome-bgfix.css";
-            post_hook   = "bash '${zenBgFixApply}'";
-          };
-          # Neovim theming (see matugenTemplate in the let block; loaded by editor.nix
-          # via base16-nvim). Renders into the nixvim-managed config dir; persisted.
-          user."nvim-base16" = {
-            input_path  = "${matugenTemplate}";
-            output_path = "$XDG_CONFIG_HOME/nvim/lua/matugen.lua";
-            post_hook   = "pkill -SIGUSR1 nvim";
-          };
-        };
+        mode    = "dark";
+        source  = "builtin";
+        builtin = "Noctalia";
       };
 
       # Static wallpaper, vendored in the repo so it survives the ephemeral root
@@ -548,10 +420,6 @@ in
       ];
       id = 0;
       isDefault = true;
-      # userChrome.css is intentionally NOT managed here: the Noctalia
-      # zen-browser community template's apply.sh owns it at runtime (injects
-      # @import lines). Managing it via HM would make apply.sh clobber the
-      # store symlink and break the next rebuild.
       settings = {
         "browser.ai.control.default"            = "blocked";
         "browser.ai.control.linkPreviewKeyPoints" = "blocked";
@@ -559,15 +427,12 @@ in
         "browser.ai.control.sidebarChatbot"     = "blocked";
         "browser.ai.control.smartTabGroups"     = "blocked";
         "browser.ai.control.translations"       = "blocked";
-        "zen.theme.toolbar-themed"              = false;
-        "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
       };
     };
   };
 
   # Cursor / icons / GTK / Qt
-  # Base dark theme + assets. Noctalia's templates overlay accent colors on top
-  # (gtk-3.0/4.0 noctalia.css, qt5ct/qt6ct color files).
+  # Base dark theme + assets (no Noctalia app-theming templates).
   home.pointerCursor = {
     package = pkgs.phinger-cursors;
     name    = "phinger-cursors-dark";
@@ -580,10 +445,6 @@ in
     theme     = { package = pkgs.adw-gtk3; name = "adw-gtk3-dark"; };
     iconTheme = { package = pkgs.papirus-icon-theme; name = "Papirus-Dark"; };
     font      = { name = "Adwaita Sans"; size = 11; };
-    # Don't let HM manage gtk-4.0/gtk.css — the Noctalia gtk4 template's apply.sh
-    # owns it (injects @import noctalia.css). HM managing it collides at
-    # activation. GTK4/libadwaita colors come from the imported noctalia.css.
-    gtk4.theme = null;
   };
 
   qt = {
@@ -595,11 +456,6 @@ in
   programs.ghostty = {
     enable = true;
     settings = {
-      # Colors come from the Noctalia "ghostty" template (writes ~/.config/ghostty/themes/noctalia).
-      theme = "noctalia";
-      # Translucent background so niri's window-rule blur is visible behind it
-      # (niri blurs through transparent pixels; an opaque window shows no blur).
-      background-opacity = 0.8;
       font-family = "FiraCode Nerd Font";
       font-size = 11;
       keybind = [
