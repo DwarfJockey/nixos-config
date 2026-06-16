@@ -14,7 +14,7 @@
     nixpkgs.source = inputs.nixpkgs;
 
     # Theme
-    # Colors come from Noctalia's Framework palette via the `nvim-base16` user
+    # Colors come from Noctalia's Tomorrow palette via the `nvim-base16` user
     # template (modules/home-manager/desktop.nix), which renders a base16 module to
     # ~/.config/nvim/lua/matugen.lua (it brings its own SIGUSR1 reload handler).
     # base16-nvim provides the `base16-colorscheme` it requires; no nixvim wrapper.

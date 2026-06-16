@@ -47,24 +47,24 @@ let
     function M.setup()
       require('base16-colorscheme').setup {
         -- Background tones
-        base00 = '{{colors.surface.default.hex}}', -- Default Background
-        base01 = '{{colors.surface_container.default.hex}}', -- Lighter Background (status bars)
-        base02 = '{{colors.surface_container_high.default.hex}}', -- Selection Background
-        base03 = '{{colors.outline.default.hex}}', -- Comments, Invisibles
+        base00 = '{{colors.terminal_normal_black.default.hex}}', -- Default Background
+        base01 = '{{colors.terminal_normal_red.default.hex}}', -- Lighter Background (status bars)
+        base02 = '{{colors.terminal_normal_green.default.hex}}', -- Selection Background
+        base03 = '{{colors.terminal_normal_yellow.default.hex}}', -- Comments, Invisibles
         -- Foreground tones
-        base04 = '{{colors.on_surface_variant.default.hex}}', -- Dark Foreground (status bars)
-        base05 = '{{colors.on_surface.default.hex}}', -- Default Foreground
-        base06 = '{{colors.on_surface.default.hex}}', -- Light Foreground
-        base07 = '{{colors.on_background.default.hex}}', -- Lightest Foreground
+        base04 = '{{colors.terminal_normal_blue.default.hex}}', -- Dark Foreground (status bars)
+        base05 = '{{colors.terminal_normal_magenta.hex}}', -- Default Foreground
+        base06 = '{{colors.terminal_normal_cyan.hex}}', -- Light Foreground
+        base07 = '{{colors.terminal_normal_white.hex}}', -- Lightest Foreground
         -- Accent colors
-        base08 = '{{colors.error.default.hex}}', -- Variables, XML Tags, Errors
-        base09 = '{{colors.tertiary.default.hex}}', -- Integers, Constants
-        base0A = '{{colors.secondary.default.hex}}', -- Classes, Search Background
-        base0B = '{{colors.primary.default.hex}}', -- Strings, Diff Inserted
-        base0C = '{{colors.tertiary_fixed_dim.default.hex}}', -- Regex, Escape Chars
-        base0D = '{{colors.primary_fixed_dim.default.hex}}', -- Functions, Methods
-        base0E = '{{colors.secondary_fixed_dim.default.hex}}', -- Keywords, Storage
-        base0F = '{{colors.error_container.default.hex}}', -- Deprecated, Embedded Tags
+        base08 = '{{colors.terminal_bright_black.default.hex}}', -- Variables, XML Tags, Errors
+        base09 = '{{colors.terminal_bright_red.default.hex}}', -- Integers, Constants
+        base0A = '{{colors.terminal_bright_green.default.hex}}', -- Classes, Search Background
+        base0B = '{{colors.terminal_bright_yellow.default.hex}}', -- Strings, Diff Inserted
+        base0C = '{{colors.terminal_bright_blue.default.hex}}', -- Regex, Escape Chars
+        base0D = '{{colors.terminal_bright_magenta.default.hex}}', -- Functions, Methods
+        base0E = '{{colors.terminal_bright_cyan.default.hex}}', -- Keywords, Storage
+        base0F = '{{colors.terminal_bright_white.default.hex}}', -- Deprecated, Embedded Tags
       }
 
       -- Clear backgrounds so the (translucent, niri-blurred) terminal shows
@@ -422,12 +422,12 @@ in
   programs.noctalia = {
     enable = true;
     package = noctaliaPkg;
-    customPalettes.Framework = import ./framework-palette.nix;
+    customPalettes.Tomorrow = import ./tomorrow-palette.nix;
     settings = {
       theme = {
         mode = "dark";
         source = "custom";
-        custom_palette = "Framework";
+        custom_palette = "Tomorrow";
         # App theming: render Noctalia's palette into GTK/Qt/Ghostty configs, the
         # community Zen Browser template (its apply.sh injects @imports into the Zen
         # profile's chrome CSS), and a Neovim base16 template (see matugenTemplate).
