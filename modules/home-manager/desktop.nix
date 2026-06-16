@@ -392,7 +392,10 @@ in
     };
   };
 
-  # Zen Browser
+  # Zen Browser — Stylix themes it via its zen-browser target; tell it which
+  # profile(s) to write userChrome/userContent into.
+  stylix.targets.zen-browser.profileNames = [ "03bokykz.Default Profile" ];
+
   programs.zen-browser = {
     enable = true;
     nativeMessagingHosts = [ pkgs._1password-gui ];
