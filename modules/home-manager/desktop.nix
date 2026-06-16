@@ -3,6 +3,34 @@
 let
   noctaliaPkg = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
+  # Bridge Stylix -> Noctalia: Stylix's own noctalia-shell target no-ops here (it
+  # writes programs.noctalia-shell.colors, but this repo uses programs.noctalia),
+  # so build a Noctalia custom palette from Stylix's base16 colors instead. The
+  # m* mapping matches Stylix's noctalia-shell target; the terminal block follows
+  # base16 slot order (Stylix themes real terminals directly — this is just for
+  # Noctalia's internal palette completeness).
+  stylixColors = config.lib.stylix.colors.withHashtag;
+  noctaliaVariant = with stylixColors; {
+    mSurface = base00; mOnSurface = base05;
+    mSurfaceVariant = base01; mOnSurfaceVariant = base04;
+    mPrimary = base0D; mOnPrimary = base00;
+    mSecondary = base0E; mOnSecondary = base00;
+    mTertiary = base0C; mOnTertiary = base00;
+    mError = base08; mOnError = base00;
+    mOutline = base03; mShadow = base00;
+    mHover = base0C; mOnHover = base00;
+    terminal = {
+      background = base00; foreground = base05; cursor = base08; cursorText = base00;
+      selectionBg = base02; selectionFg = base07;
+      normal = { black = base00; red = base01; green = base02; yellow = base03;
+                 blue = base04; magenta = base05; cyan = base06; white = base07; };
+      bright = { black = base08; red = base09; green = base0A; yellow = base0B;
+                 blue = base0C; magenta = base0D; cyan = base0E; white = base0F; };
+    };
+  };
+  # Single Stylix scheme (dark polarity); reuse it for both variants since mode=dark.
+  noctaliaStylixPalette = { dark = noctaliaVariant; light = noctaliaVariant; };
+
   baseShadow = {
     enable = true;
     softness = 10;
@@ -315,13 +343,13 @@ in
   programs.noctalia = {
     enable = true;
     package = noctaliaPkg;
+    # Noctalia's own UI follows Stylix via this generated palette (see the let block).
+    customPalettes.Stylix = noctaliaStylixPalette;
     settings = {
-      # Noctalia themes only its own UI from a built-in scheme. No custom palette
-      # and no app-theming templates — external apps use their own defaults.
       theme = {
-        mode    = "dark";
-        source  = "builtin";
-        builtin = "Noctalia";
+        mode           = "dark";
+        source         = "custom";
+        custom_palette = "Stylix";
       };
 
       # Static wallpaper, vendored in the repo so it survives the ephemeral root
