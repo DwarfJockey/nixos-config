@@ -41,13 +41,13 @@ nix flake update <input-name>
 - `home/robert.nix` — Home Manager entry point (persistence, packages, Claude Code settings). Imported as a NixOS module, not standalone.
 - `secrets/secrets.nix` + `secrets/*.age` — agenix recipients and encrypted secrets. Decrypted at boot via `/persist/etc/ssh/ssh_host_ed25519_key`.
 
-**Key flake inputs:** nixpkgs (unstable), nixos-hardware, impermanence, home-manager, noctalia, nixvim, niri, zen-browser, firefox-addons, agenix.
+**Key flake inputs:** nixpkgs (unstable), nixos-hardware, impermanence, home-manager, noctalia, nixvim, niri, zen-browser, firefox-addons, agenix, stylix.
 
 ## Key Patterns
 
 **Impermanence:** Everything outside `/nix` and `/persist` is wiped on reboot. System persistence is declared in the host config (`environment.persistence."/persist"`). User persistence is in `home/robert.nix` (`home.persistence."/persist"`). When adding new stateful paths, they must be added to the appropriate persistence config.
 
-**Theming:** Noctalia themes only its own UI (bar/panels/lock) from a built-in scheme — `programs.noctalia.settings.theme` in `desktop.nix` is set to `source = "builtin"`, `builtin = "Noctalia"`, `mode = "dark"`. There is **no** custom palette and **no** app-theming templates: external apps (GTK, Qt, Ghostty, niri, Zen, Neovim, Claude, starship) use their own defaults. Base appearance assets are still declared statically: system fonts in `modules/nixos/theming.nix`; cursor (phinger-dark), icons (Papirus-Dark), GTK (adw-gtk3-dark), and Qt (qtct) in `modules/home-manager/desktop.nix`. (Theming is intentionally a clean slate, to be rebuilt later.)
+**Theming:** Stylix (NixOS module, configured in `modules/nixos/theming.nix`) owns system-wide theming from a single base16 scheme — `base16Scheme = base16-schemes "Default Dark"`, `polarity = "dark"` — driving colors, fonts, cursor (phinger-dark), and icons (Papirus-Dark). With `autoEnable` on, Stylix themes every installed native target (GTK, Qt, console/TTY, Ghostty, nushell, starship, Zen, …); Home Manager is a NixOS module, so its Stylix targets auto-inherit the system scheme (`desktop.nix` just sets `gtk.enable`/`qt.enable` and leaves Ghostty's theme/font to Stylix). A few things have no Stylix target and keep their own theming: **Noctalia** (its target expects `programs.noctalia-shell.colors`, but this repo uses `programs.noctalia`; it stays on its built-in scheme — `theme = { source = "builtin"; builtin = "Noctalia"; mode = "dark"; }` in `desktop.nix`), **nixvim** (Stylix only targets vanilla `programs.neovim`; uses its default colorscheme), **Claude Code** (`theme = "dark"`), and **niri** (default colors). To turn off a misbehaving target: `stylix.targets.<name>.enable = false`.
 
 **Home Manager:** Integrated as a NixOS module via `home-manager.nixosModules.home-manager` in the flake. User config is imported with `home-manager.users.robert`.
 

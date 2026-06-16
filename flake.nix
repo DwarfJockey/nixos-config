@@ -51,9 +51,14 @@
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    stylix = {
+      url = "github:nix-community/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, zen-browser, firefox-addons, niri, agenix, ... }@inputs:
+  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, zen-browser, firefox-addons, niri, agenix, stylix, ... }@inputs:
   {
     nixosConfigurations.framework-13 = nixpkgs.lib.nixosSystem {
       specialArgs = { inherit inputs; };
@@ -65,6 +70,7 @@
         home-manager.nixosModules.home-manager
         niri.nixosModules.niri
         agenix.nixosModules.default
+        stylix.nixosModules.stylix
         ./hosts/framework-13
       ];
     };

@@ -431,33 +431,15 @@ in
     };
   };
 
-  # Cursor / icons / GTK / Qt
-  # Base dark theme + assets (no Noctalia app-theming templates).
-  home.pointerCursor = {
-    package = pkgs.phinger-cursors;
-    name    = "phinger-cursors-dark";
-    size    = 24;
-    gtk.enable = true;
-  };
+  # GTK / Qt — theme, icons, cursor, and fonts are owned by Stylix
+  # (modules/nixos/theming.nix); these just enable the integrations.
+  gtk.enable = true;
+  qt.enable = true;
 
-  gtk = {
-    enable = true;
-    theme     = { package = pkgs.adw-gtk3; name = "adw-gtk3-dark"; };
-    iconTheme = { package = pkgs.papirus-icon-theme; name = "Papirus-Dark"; };
-    font      = { name = "Adwaita Sans"; size = 11; };
-  };
-
-  qt = {
-    enable = true;
-    platformTheme.name = "qtct";
-  };
-
-  # Ghostty
+  # Ghostty — theme and font come from Stylix's ghostty target.
   programs.ghostty = {
     enable = true;
     settings = {
-      font-family = "FiraCode Nerd Font";
-      font-size = 11;
       keybind = [
         "performable:ctrl+c=copy_to_clipboard"
         "ctrl+v=paste_from_clipboard"
