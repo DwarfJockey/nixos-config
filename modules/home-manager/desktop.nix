@@ -82,12 +82,10 @@ in
 
     workspaces."1" = {};
 
-    layout.border.enable = false;
-    # focus-ring uses niri's default colors (no Noctalia theming).
-    layout.focus-ring = {
-      enable = true;
-      width  = 0.5;
-    };
+    # Border/focus-ring are themed by niri-flake's stylix target
+    # (stylix.targets.niri): border enabled, active = base0D / inactive = base03,
+    # focus-ring off, cursor from stylix.cursor. We leave them at the target's
+    # defaults rather than overriding here.
     layout.struts.bottom = 4;
     layout.struts.top = 4;
     layout.shadow = baseShadow;
