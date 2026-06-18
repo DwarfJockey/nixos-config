@@ -8,11 +8,38 @@
   # Noctalia (built-in scheme), nixvim (default), Claude ("dark"), niri (default).
   stylix = {
     enable = true;
-    base16Scheme = "${pkgs.base16-schemes}/share/themes/default-dark.yaml";
+    base16Scheme = {
+      scheme = "Over-Engineered Dark";
+      author = "AI Color Theoretician (2026)";
+      base00 = "050608";
+      base01 = "0b0d12";
+      base02 = "1c1f27";
+      base03 = "464d5b";
+      base04 = "80899b";
+      base05 = "c8ceda";
+      base06 = "e1e5ec";
+      base07 = "f3f5f7";
+      base08 = "e0707f";
+      base09 = "dd7a46";
+      base0A = "9ca021";
+      base0B = "46b16d";
+      base0C = "04afa5";
+      base0D = "479eea";
+      base0E = "a782e0";
+      base0F = "d073b4";
+    };
     polarity = "dark";
     # Optional with an explicit scheme; set so wallpaper-using targets stay
     # consistent. Noctalia still owns the live desktop wallpaper.
-    image = ../../modules/home-manager/wallpapers/framework-pro-7.png;
+    image = ../../modules/home-manager/wallpapers/demon-city-shinjuku.jpg;
+
+    # Window opacity. Bridged into programs.noctalia / niri layer-rules in
+    # desktop.nix, since Stylix's noctalia-shell target no-ops against this
+    # repo's programs.noctalia. terminal/applications stay opaque (1.0 default).
+    opacity = {
+      desktop = 0.85; # bar / widgets
+      popups  = 0.90; # panels, launcher, control-center, notifications
+    };
 
     fonts = {
       serif     = { package = pkgs.noto-fonts;                  name = "Noto Serif"; };

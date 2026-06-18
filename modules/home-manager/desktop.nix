@@ -10,6 +10,10 @@ let
   # base16 slot order (Stylix themes real terminals directly — this is just for
   # Noctalia's internal palette completeness).
   stylixColors = config.lib.stylix.colors.withHashtag;
+  # Window opacity owned by Stylix (set in theming.nix, propagated to HM via
+  # followSystem). Bridged manually because Stylix's noctalia-shell target
+  # no-ops against this repo's programs.noctalia.
+  stylixOpacity = config.stylix.opacity;
   noctaliaVariant = with stylixColors; {
     mSurface = base00; mOnSurface = base05;
     mSurfaceVariant = base01; mOnSurfaceVariant = base04;
@@ -31,31 +35,57 @@ let
   # Single Stylix scheme (dark polarity); reuse it for both variants since mode=dark.
   noctaliaStylixPalette = { dark = noctaliaVariant; light = noctaliaVariant; };
 
-  baseShadow = {
+  # Wallpaper: the vendored photo remapped onto the base16 palette (lutgen, with
+  # luminosity preserved so the photo's structure survives the hue shift) and
+  # then dimmed toward the theme background — a subtle, on-theme backdrop rather
+  # than a busy neon photo. Built in the Nix store like any other asset, so it
+  # survives the ephemeral root and keeps the niri overview backdrop filled.
+  # Colors come from the scheme, so the wallpaper tracks it. Dim is tunable:
+  # -colorize 55% = blend 55% toward base00 (higher = darker/flatter);
+  # -modulate 100,80,100 = 80% saturation (lower = greyer).
+  wallpaperSrc = ./wallpapers/demon-city-shinjuku.jpg;
+  base16Palette = with config.lib.stylix.colors; [
+    base00 base01 base02 base03 base04 base05 base06 base07
+    base08 base09 base0A base0B base0C base0D base0E base0F
+  ];
+  themedWallpaper = pkgs.runCommand "wallpaper-themed.png" { } ''
+    ${pkgs.lutgen}/bin/lutgen apply -P -o recolored.png ${wallpaperSrc} -- \
+      ${lib.concatStringsSep " " base16Palette}
+    ${pkgs.imagemagick}/bin/magick recolored.png \
+      -modulate 100,80,100 \
+      -fill "${stylixColors.base00}" -colorize 55% \
+      $out
+  '';
+
+  # Material-3 elevation, approximated with niri's single drop shadow (niri can't
+  # stack umbra+penumbra+ambient). color = MD3 key-shadow alpha 0.30 (#0000004D);
+  # geometry blended toward the soft ambient layer. draw-behind-window = false so
+  # the shadow stays outside the surface and doesn't bleed through translucent popups.
+  baseShadow = {            # MD3 Level 1 — resting tiled windows + bar
     enable = true;
-    softness = 10;
+    softness = 4;
     spread = 0;
-    offset = { x = 0; y = 2; };
-    color = "#00000040";
-    draw-behind-window = true;
+    offset = { x = 0; y = 1; };
+    color = "#0000004D";
+    draw-behind-window = false;
   };
 
-  activeShadow = {
+  activeShadow = {          # MD3 Level 3 — active / raised window
     enable = true;
-    softness = 15;
+    softness = 8;
     spread = 1;
-    offset = { x = 0; y = 4; };
-    color = "#00000050";
-    draw-behind-window = true;
+    offset = { x = 0; y = 3; };
+    color = "#0000004D";
+    draw-behind-window = false;
   };
 
-  popupShadow = {
+  popupShadow = {           # MD3 Level 5 — floating windows, panels, popups
     enable = true;
-    softness = 20;
-    spread = 2;
+    softness = 12;
+    spread = 3;
     offset = { x = 0; y = 6; };
-    color = "#00000060";
-    draw-behind-window = true;
+    color = "#0000004D";
+    draw-behind-window = false;
   };
 in
 {
@@ -82,10 +112,12 @@ in
 
     workspaces."1" = {};
 
-    # Border/focus-ring are themed by niri-flake's stylix target
+    # Border/focus-ring colors come from niri-flake's stylix target
     # (stylix.targets.niri): border enabled, active = base0D / inactive = base03,
-    # focus-ring off, cursor from stylix.cursor. We leave them at the target's
-    # defaults rather than overriding here.
+    # focus-ring off, cursor from stylix.cursor. We override only the width —
+    # niri's default is 4; 2 logical px reads as a crisp thin accent on this 2×
+    # display (colors stay target-driven via mkDefault).
+    layout.border.width = 2;
     layout.struts.bottom = 4;
     layout.struts.top = 4;
     layout.shadow = baseShadow;
@@ -103,20 +135,23 @@ in
         matches = [{ namespace = "^noctalia-backdrop"; }];
         place-within-backdrop = true;
       }
-      { # Panels / popups (elevation 8)
+      { # Panels / popups. Shadow is drawn by Noctalia itself, not niri: niri
+        # can't clip a layer-surface shadow to a floating popup's visible card
+        # (it shadows the whole surface incl. invisible margins), so these
+        # surfaces' shadows would land at the surface edge, far from the card.
         matches = [{ namespace = "^noctalia-"; }];
         excludes = [
           { namespace = "^noctalia-bar"; }
           { namespace = "^noctalia-backdrop"; }
           { namespace = "^noctalia-wallpaper"; }
         ];
-        opacity = 0.8;
-        shadow = popupShadow;
+        opacity = stylixOpacity.popups;
+        # 12px matches libadwaita's popover/menu radius.
         geometry-corner-radius = {
-          bottom-left = 10.0;
-          bottom-right = 10.0;
-          top-left = 10.0;
-          top-right = 10.0;
+          bottom-left = 12.0;
+          bottom-right = 12.0;
+          top-left = 12.0;
+          top-right = 12.0;
         };
       }
       { # Status bar (elevation 2)
@@ -350,11 +385,11 @@ in
         custom_palette = "Stylix";
       };
 
-      # Static wallpaper, vendored in the repo so it survives the ephemeral root
-      # (the GUI/runtime wallpaper state in ~/.local/state/noctalia is not
-      # persisted). Noctalia reads [wallpaper.default].path from config.toml.
+      # base16-recolored, dimmed wallpaper generated in the Nix store; see
+      # themedWallpaper in the let block. Noctalia reads [wallpaper.default].path
+      # from config.toml (a declarative, persisted setting).
       wallpaper = {
-        default.path = "${./wallpapers/framework-pro-7.png}";
+        default.path = "${themedWallpaper}";
         automation.enabled = false;
       };
 
@@ -364,18 +399,25 @@ in
         start  = [ "launcher" "workspaces" ];
         center = [ "notifications" "clock" "weather" ];
         end    = [ "tray" "clipboard" "volume" "bluetooth" "network" "battery" ];
-        # Flat bar restyle
+        # Flat bar restyle. Neutral on_surface/outline roles (blue mPrimary only
+        # on active states) so the bar reads like a libadwaita panel rather than
+        # a purple-tinted (secondary) one.
         capsule            = false;
         capsule_opacity    = 0.0;
-        capsule_border     = "secondary";
+        capsule_border     = "outline";
         capsule_radius     = 0;
-        color              = "secondary";
-        thickness          = 36;
-        background_opacity = 0.8;
-        padding            = 10;
-        widget_spacing     = 10;
-        radius             = 0;
+        color              = "on_surface";
+        font_weight        = 400;
+        thickness          = 32;
+        background_opacity = stylixOpacity.desktop;
+        padding            = 12;
+        widget_spacing     = 12;
+        radius             = 15;
+        border_width       = 1.0;
+        # Bar shadow stays niri-owned (anchored full-width surface; niri places
+        # it correctly). Noctalia only draws shadows for its popups/panels.
         shadow             = false;
+        contact_shadow     = false;
         margin_ends        = 0;
         margin_edge        = 0;
       };
@@ -383,16 +425,22 @@ in
       shell = {
         font_family = "Adwaita Sans";
         settings_show_advanced = true;
-        app_icon_colorize = true;
+        app_icon_colorize = false;
         panel = {
           session_placement = "centered";
           transparency_mode = "glass";
           control_center_placement = "floating";
           open_near_click_control_center = true;
-          shadow = false;
+          # Noctalia draws popup/panel shadows (content-aware) since niri can't
+          # place a layer-surface shadow on a floating popup card. Color = the
+          # palette's mShadow (base00).
+          shadow = true;
         };
-        shadow.alpha = 0.0;
+        shadow.alpha = 0.55;
       };
+
+      # dock.shadow defaults to true — disable so no Noctalia surface casts a shadow.
+      dock.shadow = false;
 
       control_center.sidebar_section = "none";
 
@@ -403,6 +451,7 @@ in
       location.auto_locate  = true;
       nightlight.enabled    = true;
       notification.position = "top_center";
+      osd.position          = "bottom_center";
       weather.unit          = "imperial";
 
       widget = {
