@@ -36,7 +36,7 @@ nix flake update <input-name>
 - `flake.nix` — Entry point. Defines inputs, passes all of them as `specialArgs` to modules.
 - `hosts/framework-13/default.nix` — Thin host entry. Imports the modules below plus host-only bits (locale, top-level packages, stateVersion).
 - `hosts/framework-13/{hardware-configuration,disko}.nix` — Disk layout, filesystems, kernel modules. Root is tmpfs; `/nix` and `/persist` are Btrfs subvolumes.
-- `modules/nixos/{boot,nix,networking,bluetooth,audio,desktop,theming,persistence,apps,users}.nix` — System-level NixOS modules, one concern each.
+- `modules/nixos/{boot,nix,networking,bluetooth,audio,desktop,theming,persistence,apps,users,boot-defaults}.nix` — System-level NixOS modules, one concern each. `boot-defaults` sets startup hardware levels (screen brightness 50%, keyboard backlight full-on at boot and after resume, audio volume 50%).
 - `modules/home-manager/{shell,editor,desktop}.nix` — Home Manager modules imported by `home/robert.nix`.
 - `home/robert.nix` — Home Manager entry point (persistence, packages, Claude Code settings). Imported as a NixOS module, not standalone.
 - `secrets/secrets.nix` + `secrets/*.age` — agenix recipients and encrypted secrets. Decrypted at boot via `/persist/etc/ssh/ssh_host_ed25519_key`.
