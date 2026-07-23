@@ -3,16 +3,19 @@
 let
   noctaliaPkg = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
-  # Bridge Stylix -> Noctalia: Stylix's own noctalia-shell target no-ops here (it
-  # writes programs.noctalia-shell.colors, but this repo uses programs.noctalia),
-  # so build a Noctalia custom palette from Stylix's base16 colors instead. The
-  # m* mapping matches Stylix's noctalia-shell target; the terminal block follows
-  # base16 slot order (Stylix themes real terminals directly — this is just for
-  # Noctalia's internal palette completeness).
+  # Bridge Stylix -> Noctalia manually. Stylix now ships a `noctalia` target
+  # (stylix.targets.noctalia) that writes programs.noctalia too, but it uses the
+  # raw stylix.image for the wallpaper (this repo wants the recolored+dimmed
+  # themedWallpaper below) and doesn't bridge the bar opacity — so it's disabled
+  # (see stylix.targets.noctalia.enable below) in favour of this tuned bridge.
+  # Build a Noctalia custom palette from Stylix's base16 colors; the m* mapping
+  # matches Stylix's target, and the terminal block follows base16 slot order
+  # (Stylix themes real terminals directly — this is just for Noctalia's internal
+  # palette completeness).
   stylixColors = config.lib.stylix.colors.withHashtag;
   # Window opacity owned by Stylix (set in theming.nix, propagated to HM via
-  # followSystem). Bridged manually because Stylix's noctalia-shell target
-  # no-ops against this repo's programs.noctalia.
+  # followSystem). Bridged manually here: Stylix's noctalia target is disabled
+  # (below) and only bridges dock/notification/osd opacity anyway, not the bar.
   stylixOpacity = config.stylix.opacity;
   noctaliaVariant = with stylixColors; {
     mSurface = base00; mOnSurface = base05;
@@ -117,7 +120,7 @@ in
     # focus-ring off, cursor from stylix.cursor. We override only the width —
     # niri's default is 4; 2 logical px reads as a crisp thin accent on this 2×
     # display (colors stay target-driven via mkDefault).
-    layout.border.width = 2;
+    layout.border.width = 1;
     layout.struts.bottom = 4;
     layout.struts.top = 4;
     layout.shadow = baseShadow;
@@ -371,6 +374,11 @@ in
       ''
     )
   );
+
+  # Stylix now ships a `noctalia` target; disable it so the manual bridge above
+  # (themed wallpaper + bar opacity, which the target doesn't cover) owns the
+  # Noctalia theming instead of conflicting with it.
+  stylix.targets.noctalia.enable = false;
 
   # Noctalia shell
   programs.noctalia = {
