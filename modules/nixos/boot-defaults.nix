@@ -20,6 +20,14 @@ let
     done
   '';
 
+  # Battery charge limit -> 80%, to extend battery lifespan. The framework_laptop
+  # module (nixos-hardware) exposes charge_control_end_threshold as root-writable
+  # sysfs. The guard keeps this a no-op if the node/name ever changes.
+  setChargeLimit = pkgs.writeShellScript "battery-charge-limit" ''
+    f=/sys/class/power_supply/BAT1/charge_control_end_threshold
+    [ -w "$f" ] && echo 80 > "$f" || true
+  '';
+
   # Audio volume -> 50%. Lives in the user's PipeWire graph, so this runs as a
   # user service. The default sink can lag WirePlumber's start, so retry until
   # wpctl finds it.
@@ -48,6 +56,15 @@ in
     serviceConfig = {
       Type = "oneshot";
       ExecStart = setKbdBacklight;
+    };
+  };
+
+  systemd.services.battery-charge-limit = {
+    description = "Limit battery charge to 80%";
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = setChargeLimit;
     };
   };
 

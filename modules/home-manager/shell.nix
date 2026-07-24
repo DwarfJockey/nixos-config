@@ -24,7 +24,18 @@ let
   };
 in
 {
-  home.packages = [ claudeStatusline ];
+  home.packages = [ claudeStatusline pkgs.ripgrep pkgs.fd ];
+
+  # direnv + nix-direnv: per-project shells load automatically (nushell
+  # integration is wired by the Home-Manager module).
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+  };
+
+  # Search / preview
+  programs.fzf.enable = true;
+  programs.bat.enable = true;
 
   # Nushell
   programs.nushell = {

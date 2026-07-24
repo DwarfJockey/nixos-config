@@ -3,6 +3,8 @@
 {
   boot = {
     kernelPackages = pkgs.linuxPackages_latest;
+    # Resume from the disko-created swap partition after hibernate (desktop.nix).
+    resumeDevice = "/dev/disk/by-partlabel/disk-main-swap";
     loader = {
       systemd-boot.enable = true;
       systemd-boot.configurationLimit = 10;

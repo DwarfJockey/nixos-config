@@ -13,6 +13,9 @@
     ../../modules/nixos/desktop.nix
     ../../modules/nixos/theming.nix
     ../../modules/nixos/persistence.nix
+    ../../modules/nixos/firmware.nix
+    ../../modules/nixos/fingerprint.nix
+    ../../modules/nixos/backups.nix
     ../../modules/nixos/apps.nix
     ../../modules/nixos/users.nix
     ../../home/robert.nix

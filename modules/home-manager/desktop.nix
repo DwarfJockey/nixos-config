@@ -380,6 +380,20 @@ in
   # Noctalia theming instead of conflicting with it.
   stylix.targets.noctalia.enable = false;
 
+  # Re-assert the themed wallpaper into the running Noctalia after a switch.
+  # config.toml (persisted) always points here, but Noctalia's live source of
+  # truth is its non-persisted runtime state; when a rebuild changes the
+  # themedWallpaper store hash, the running shell still holds the stale path and
+  # falls back to its bundled default until the next reboot re-seeds from
+  # config.toml. This closes that switch-without-reboot gap. No-op (guarded) when
+  # Noctalia isn't running yet, e.g. during early boot activation.
+  home.activation.noctaliaWallpaper =
+    inputs.home-manager.lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if ${noctaliaPkg}/bin/noctalia msg wallpaper-get > /dev/null 2>&1; then
+        ${noctaliaPkg}/bin/noctalia msg wallpaper-set "${themedWallpaper}" || true
+      fi
+    '';
+
   # Noctalia shell
   programs.noctalia = {
     enable = true;

@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ inputs, pkgs, ... }:
 
 {
   imports = [ inputs.nixvim.homeModules.nixvim ];
@@ -7,6 +7,15 @@
   programs.nixvim = {
     enable = true;
     defaultEditor = true;
+
+    # Formatter binaries for conform.nvim (put on nvim's runtime PATH).
+    extraPackages = [
+      pkgs.nixfmt-rfc-style
+      pkgs.stylua
+      pkgs.black
+      pkgs.prettier
+      pkgs.shfmt
+    ];
 
     # We deliberately make nixvim follow our nixpkgs (inputs.nixvim.inputs.nixpkgs.follows
     # in flake.nix) to avoid a second nixpkgs. Set the source explicitly to acknowledge
@@ -97,8 +106,8 @@
       { mode = "n"; key = "[d";         action = "<cmd>lua vim.diagnostic.goto_prev()<CR>"; }
       { mode = "n"; key = "]d";         action = "<cmd>lua vim.diagnostic.goto_next()<CR>"; }
 
-      # Format
-      { mode = "n"; key = "<leader>cf"; action = "<cmd>lua vim.lsp.buf.format()<CR>"; }
+      # Format (conform.nvim)
+      { mode = "n"; key = "<leader>cf"; action = "<cmd>lua require('conform').format()<CR>"; }
     ];
 
     plugins = {
@@ -184,6 +193,26 @@
           delete.text       = "";
           topdelete.text    = "";
           changedelete.text = "▎";
+        };
+      };
+
+      # Formatting (format-on-save; falls back to LSP where no formatter is set)
+      conform-nvim = {
+        enable = true;
+        settings = {
+          format_on_save = {
+            lsp_format = "fallback";
+            timeout_ms = 500;
+          };
+          formatters_by_ft = {
+            nix        = [ "nixfmt" ];
+            lua        = [ "stylua" ];
+            python     = [ "black" ];
+            javascript = [ "prettier" ];
+            typescript = [ "prettier" ];
+            json       = [ "prettier" ];
+            sh         = [ "shfmt" ];
+          };
         };
       };
 

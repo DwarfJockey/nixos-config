@@ -8,6 +8,7 @@
       "/etc/NetworkManager/system-connections"
       "/var/lib/nixos"
       "/var/lib/bluetooth"
+      "/var/lib/fprint"
       "/var/lib/systemd/coredump"
       "/var/lib/AccountsService"
       "/var/log"
