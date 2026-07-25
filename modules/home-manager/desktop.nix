@@ -466,9 +466,18 @@ in
 
       control_center.sidebar_section = "none";
 
-      # Lock the session as soon as Noctalia is up, so the autologin boots
-      # straight to the lock screen. Fires once per Noctalia start (per session).
-      hooks.started = "noctalia msg session lock";
+      # Runs once per Noctalia start (per session), when its IPC is ready. Two jobs:
+      # 1. Re-assert the themed wallpaper. On a fresh boot Noctalia regenerates its
+      #    non-persisted runtime state from its OWN bundled default and ignores
+      #    config.toml's wallpaper path, so wallpaper-set is the only lever that
+      #    applies it — do this BEFORE locking so the lock screen shows it too.
+      #    (The home.activation hook above covers the switch-without-reboot case,
+      #    where Noctalia keeps running and this hook doesn't re-fire.)
+      # 2. Lock the session, so the autologin boots straight to the lock screen.
+      hooks.started = "${pkgs.writeShellScript "noctalia-started" ''
+        ${noctaliaPkg}/bin/noctalia msg wallpaper-set "${themedWallpaper}"
+        ${noctaliaPkg}/bin/noctalia msg session lock
+      ''}";
 
       location.auto_locate  = true;
       nightlight.enabled    = true;

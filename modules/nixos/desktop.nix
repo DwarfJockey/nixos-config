@@ -42,11 +42,6 @@ in
   services.power-profiles-daemon.enable = true;
   services.thermald.enable = true;
 
-  # Suspend on lid close, then hibernate after a delay to avoid overnight battery
-  # drain. Hibernation resumes from the swap partition (boot.resumeDevice, boot.nix).
-  services.logind.lidSwitch = "suspend-then-hibernate";
-  systemd.sleep.settings.Sleep.HibernateDelaySec = "30min";
-
   # Desktop services
   services.gvfs.enable = true;
   services.tumbler.enable = true;

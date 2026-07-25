@@ -2,9 +2,9 @@
 
 {
   boot = {
-    kernelPackages = pkgs.linuxPackages_latest;
-    # Resume from the disko-created swap partition after hibernate (desktop.nix).
-    resumeDevice = "/dev/disk/by-partlabel/disk-main-swap";
+    # Stable kernel, not linuxPackages_latest: mainline 7.1.x regressed the
+    # Framework analog-audio (Intel DSP) driver selection, leaving only HDMI.
+    kernelPackages = pkgs.linuxPackages;
     loader = {
       systemd-boot.enable = true;
       systemd-boot.configurationLimit = 10;
