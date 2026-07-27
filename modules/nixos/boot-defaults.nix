@@ -1,13 +1,13 @@
 { pkgs, ... }:
 
 let
-  # Screen brightness -> 50% of the panel's max. intel_backlight's brightness
+  # Screen brightness -> 30% of the panel's max. intel_backlight's brightness
   # node is root-writable sysfs, so this runs as a system service.
   setBrightness = pkgs.writeShellScript "brightness-default" ''
     dev=/sys/class/backlight/intel_backlight
     [ -w "$dev/brightness" ] || exit 0
     max=$(cat "$dev/max_brightness")
-    echo $(( max / 2 )) > "$dev/brightness"
+    echo $(( max * 30 / 100 )) > "$dev/brightness"
   '';
 
   # Keyboard backlight -> fully on. Two drivers expose the same EC backlight —
@@ -18,14 +18,6 @@ let
     for led in framework_laptop::kbd_backlight chromeos::kbd_backlight; do
       echo 100 > "/sys/class/leds/$led/brightness" 2>/dev/null || true
     done
-  '';
-
-  # Battery charge limit -> 80%, to extend battery lifespan. The framework_laptop
-  # module (nixos-hardware) exposes charge_control_end_threshold as root-writable
-  # sysfs. The guard keeps this a no-op if the node/name ever changes.
-  setChargeLimit = pkgs.writeShellScript "battery-charge-limit" ''
-    f=/sys/class/power_supply/BAT1/charge_control_end_threshold
-    [ -w "$f" ] && echo 80 > "$f" || true
   '';
 
   # Audio volume -> 50%. Lives in the user's PipeWire graph, so this runs as a
@@ -42,7 +34,7 @@ let
 in
 {
   systemd.services.brightness-default = {
-    description = "Set screen brightness to 50% at boot";
+    description = "Set screen brightness to 30% at boot";
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
@@ -56,15 +48,6 @@ in
     serviceConfig = {
       Type = "oneshot";
       ExecStart = setKbdBacklight;
-    };
-  };
-
-  systemd.services.battery-charge-limit = {
-    description = "Limit battery charge to 80%";
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = setChargeLimit;
     };
   };
 

@@ -15,7 +15,7 @@
     ../../modules/nixos/persistence.nix
     ../../modules/nixos/firmware.nix
     ../../modules/nixos/fingerprint.nix
-    ../../modules/nixos/backups.nix
+    ../../modules/nixos/keyring.nix
     ../../modules/nixos/apps.nix
     ../../modules/nixos/users.nix
     ../../home/robert.nix

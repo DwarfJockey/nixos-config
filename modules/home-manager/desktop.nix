@@ -95,7 +95,25 @@ in
   imports = [
     inputs.zen-browser.homeModules.twilight
     inputs.noctalia.homeModules.default
+    inputs.nixcord.homeModules.nixcord
   ];
+
+  # Discord: Vesktop patched with Vencord, configured declaratively by nixcord.
+  # Vesktop only (no vanilla client). Autostart is handled by niri's
+  # spawn-at-startup below; the login session is persisted via
+  # home.persistence (~/.config/vesktop) in home/robert.nix.
+  programs.nixcord = {
+    enable = true;
+    discord.enable = false;
+    vesktop.enable = true;
+    config = {
+      useQuickCss = true;
+    };
+    vesktopConfig = {
+      minimizeToTray = true;
+      tray = true;
+    };
+  };
 
   # Niri
   programs.niri.settings = {
@@ -107,10 +125,12 @@ in
     debug.honor-xdg-activation-with-invalid-serial = [];
 
     spawn-at-startup = [
-      { command = ["noctalia"]; }
+      # Noctalia is started by systemd.user.services.noctalia (below), not here —
+      # a niri-spawned scope inherited the 90s stop timeout and stalled shutdown.
       { command = ["zen-twilight"]; }
       { command = ["steam" "-silent"]; }
       { command = ["1password" "--silent"]; }
+      { command = ["vesktop" "--start-minimized"]; }
     ];
 
     workspaces."1" = {};
@@ -394,6 +414,27 @@ in
       fi
     '';
 
+  # Noctalia runs as a user service (not niri spawn-at-startup) so teardown is
+  # bounded: the Quickshell binary ignores SIGTERM, so as a niri-spawned transient
+  # scope it stalled shutdown for the full 90s DefaultTimeoutStopSec. TimeoutStopSec
+  # here gives it a 3s grace period, then SIGKILL (harmless — its runtime state is
+  # non-persisted). Bound to graphical-session.target: niri --session imports the
+  # Wayland env into the user manager, so the socket is reachable.
+  systemd.user.services.noctalia = {
+    Unit = {
+      Description = "Noctalia shell (bar / dock / control-center / lock)";
+      PartOf    = [ "graphical-session.target" ];
+      After     = [ "graphical-session.target" ];
+      Requisite = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart      = "${noctaliaPkg}/bin/noctalia";
+      Restart        = "on-failure";
+      TimeoutStopSec = 3;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
   # Noctalia shell
   programs.noctalia = {
     enable = true;
@@ -445,6 +486,12 @@ in
       };
 
       shell = {
+        # Suppress the first-run "Welcome to Noctalia" setup wizard. Noctalia
+        # otherwise shows it until a marker file exists in its state dir
+        # (~/.local/state/noctalia/.setup-complete), which impermanence wipes
+        # every reboot — so the wizard would return on every login. This
+        # persisted config.toml key short-circuits that check.
+        setup_wizard_enabled = false;
         font_family = "Adwaita Sans";
         settings_show_advanced = true;
         app_icon_colorize = false;

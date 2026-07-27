@@ -22,6 +22,7 @@
         ".config/ghostty"
         ".config/nushell"
         ".config/1Password"
+        ".config/vesktop"
         ".config/gh"
         ".config/senpai"
         ".config/dconf"
@@ -51,6 +52,7 @@
       claude-code
       vipsdisp
       gh
+      seahorse
     ];
 
     # Claude Code
