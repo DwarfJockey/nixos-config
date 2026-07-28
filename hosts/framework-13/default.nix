@@ -36,7 +36,5 @@
     xwayland-satellite
   ];
 
-  security.sudo.wheelNeedsPassword = true;
-
   system.stateVersion = "25.05";
 }

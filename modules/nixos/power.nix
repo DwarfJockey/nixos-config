@@ -12,6 +12,11 @@ let
   '';
 in
 {
+  # Power & thermal management
+  services.upower.enable = true;
+  services.power-profiles-daemon.enable = true;
+  services.thermald.enable = true;
+
   # Firmware memory training costs ~86s on every COLD boot (measured: the
   # firmware phase dominates `systemd-analyze`, everything after it is <5s).
   # It runs before NixOS loads, so no config can shorten it — but resuming from

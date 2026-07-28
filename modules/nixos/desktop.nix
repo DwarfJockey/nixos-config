@@ -30,18 +30,6 @@ in
     extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
   };
 
-  # Hardware acceleration (Intel 12th gen)
-  hardware.graphics.extraPackages = [
-    pkgs.intel-media-driver
-    pkgs.libva-vdpau-driver
-    pkgs.libvdpau-va-gl
-  ];
-
-  # Power & thermal management
-  services.upower.enable = true;
-  services.power-profiles-daemon.enable = true;
-  services.thermald.enable = true;
-
   # Desktop services
   services.gvfs.enable = true;
   services.tumbler.enable = true;
