@@ -11,7 +11,10 @@
       efi.canTouchEfiVariables = true;
       timeout = 0;
     };
-    plymouth.enable = true;
+    plymouth = {
+      enable = true;
+      theme = "bgrt";
+    };
 
     # Enable "Silent Boot"
     consoleLogLevel = 0;

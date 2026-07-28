@@ -6,6 +6,10 @@
   # nushell, starship, Zen, …). Home Manager is a NixOS module, so its Stylix
   # targets auto-inherit this config. Non-targets are left to their own theming:
   # Noctalia (built-in scheme), nixvim (default), Claude ("dark"), niri (default).
+  # Plymouth uses the firmware BGRT boot logo (boot.nix) instead of the Stylix
+  # themed splash, so this target would otherwise conflict on boot.plymouth.theme.
+  stylix.targets.plymouth.enable = false;
+
   stylix = {
     enable = true;
     base16Scheme = {
