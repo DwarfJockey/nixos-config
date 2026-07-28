@@ -10,6 +10,7 @@
     ../../modules/nixos/audio.nix
     ../../modules/nixos/bluetooth.nix
     ../../modules/nixos/boot-defaults.nix
+    ../../modules/nixos/power.nix
     ../../modules/nixos/desktop.nix
     ../../modules/nixos/theming.nix
     ../../modules/nixos/persistence.nix
