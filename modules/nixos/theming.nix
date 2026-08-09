@@ -33,9 +33,6 @@
       base0F = "d073b4";
     };
     polarity = "dark";
-    # Optional with an explicit scheme; set so wallpaper-using targets stay
-    # consistent. Noctalia still owns the live desktop wallpaper.
-    image = ../../modules/home-manager/wallpapers/demon-city-shinjuku.jpg;
 
     # Window opacity. Bridged into programs.noctalia / niri layer-rules in
     # desktop.nix, since Stylix's noctalia-shell target no-ops against this

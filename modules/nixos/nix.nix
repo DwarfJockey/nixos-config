@@ -13,7 +13,4 @@
   };
 
   nixpkgs.config.allowUnfree = true;
-
-  # Legacy nix-env / nix-build / nix-shell don't read nixpkgs.config.
-  environment.sessionVariables.NIXPKGS_ALLOW_UNFREE = "1";
 }

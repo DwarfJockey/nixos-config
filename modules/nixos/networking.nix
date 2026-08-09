@@ -6,14 +6,10 @@
     networkmanager.enable = true;
   };
 
-  # Network discovery (Nautilus)
+  # Network discovery (Nautilus) — resolve other hosts' .local names. No publish
+  # block: that self-advertises this host, which nothing here consumes.
   services.avahi = {
     enable = true;
     nssmdns4 = true;
-    publish = {
-      enable = true;
-      addresses = true;
-      workstation = true;
-    };
   };
 }
