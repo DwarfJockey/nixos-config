@@ -17,6 +17,15 @@ in
   services.power-profiles-daemon.enable = true;
   services.thermald.enable = true;
 
+  # UPower's default critical-battery action is HybridSleep, which writes a full
+  # RAM image to swap and then suspends. Hibernation is deliberately disabled on
+  # this host (no `resume=` on the kernel cmdline; hibernate was reverted in
+  # 76a8ee0), so that image can never be restored — the write is pure waste and
+  # the machine just s2idle-suspends at ~2% battery and drains to a cold boot
+  # (lost work). PowerOff does a clean shutdown instead, which is the only action
+  # that actually protects state without working hibernation.
+  services.upower.criticalPowerAction = "PowerOff";
+
   # Firmware memory training costs ~86s on every COLD boot (measured: the
   # firmware phase dominates `systemd-analyze`, everything after it is <5s).
   # It runs before NixOS loads, so no config can shorten it — but resuming from
