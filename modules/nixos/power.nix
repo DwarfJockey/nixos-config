@@ -10,12 +10,41 @@ let
     done
     exit 0
   '';
+
+  # PPD doesn't auto-switch on AC/battery, so drive it from the AC-adapter state:
+  # performance on mains, power-saver on battery. ACAD is the Framework's Mains
+  # power_supply node.
+  setPowerProfile = pkgs.writeShellScript "power-profile-auto" ''
+    if [ "$(cat /sys/class/power_supply/ACAD/online 2>/dev/null)" = "1" ]; then
+      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance
+    else
+      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver
+    fi
+  '';
 in
 {
   # Power & thermal management
   services.upower.enable = true;
   services.power-profiles-daemon.enable = true;
   services.thermald.enable = true;
+
+  # performance on AC, power-saver on battery. The oneshot does the D-Bus call
+  # (ordered after PPD so the boot run doesn't race it); udev only kicks it on
+  # plug/unplug with --no-block, which is safe inside a RUN+ rule.
+  systemd.services.power-profile-auto = {
+    description = "Set power profile from AC-adapter state";
+    after = [ "power-profiles-daemon.service" ];
+    wants = [ "power-profiles-daemon.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = setPowerProfile;
+    };
+  };
+
+  services.udev.extraRules = ''
+    SUBSYSTEM=="power_supply", KERNEL=="ACAD", RUN+="${pkgs.systemd}/bin/systemctl --no-block restart power-profile-auto.service"
+  '';
 
   # UPower's default critical-battery action is HybridSleep, which writes a full
   # RAM image to swap and then suspends. Hibernation is deliberately disabled on
