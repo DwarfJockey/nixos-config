@@ -50,6 +50,7 @@
       file-roller
       gnome-text-editor
       claude-code
+      nodejs
       vipsdisp
       gh
       seahorse
