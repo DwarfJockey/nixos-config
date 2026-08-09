@@ -28,11 +28,8 @@
   environment.systemPackages = with pkgs; [
     git
     curl
-    wget
-    python3
     vim
     gimp
-    samba
     xwayland-satellite
   ];
 
