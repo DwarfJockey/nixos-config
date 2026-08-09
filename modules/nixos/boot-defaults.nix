@@ -10,13 +10,13 @@ let
     echo $(( max * 30 / 100 )) > "$dev/brightness"
   '';
 
-  # Keyboard backlight -> fully on. Two drivers expose the same EC backlight —
-  # framework_laptop and cros_kbd_led_backlight — so write to both LED nodes:
-  # each write drives the EC and updates that driver's cached value, so neither
-  # re-asserts a stale 0 (e.g. after resume). Lower the 100 (0..100) to dim.
+  # Keyboard backlight -> lowest lit level (20/100). Two drivers expose the same
+  # EC backlight — framework_laptop and cros_kbd_led_backlight — so write to both
+  # LED nodes: each write drives the EC and updates that driver's cached value,
+  # so neither re-asserts a stale 0 (e.g. after resume). Adjust 20 (0..100).
   setKbdBacklight = pkgs.writeShellScript "kbd-backlight-on" ''
     for led in framework_laptop::kbd_backlight chromeos::kbd_backlight; do
-      echo 100 > "/sys/class/leds/$led/brightness" 2>/dev/null || true
+      echo 20 > "/sys/class/leds/$led/brightness" 2>/dev/null || true
     done
   '';
 
@@ -43,7 +43,7 @@ in
   };
 
   systemd.services.kbd-backlight-on = {
-    description = "Turn the keyboard backlight on";
+    description = "Set the keyboard backlight to its lowest lit level";
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
