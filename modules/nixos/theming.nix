@@ -58,4 +58,30 @@
       light   = "Papirus-Light";
     };
   };
+
+  # Keep Stylix's Qt style away from the polkit agent.
+  #
+  # Stylix's qt target (platform "qtct", the only value it supports) sets
+  # `qt.style.name = "kvantum"`, which exports QT_STYLE_OVERRIDE=kvantum. That is
+  # right for QWidget apps — libkvantum.so is installed and gets the base16 theme.
+  # But Kvantum is a *widget* style and ships no QML module, and polkit-kde-agent
+  # feeds QT_STYLE_OVERRIDE straight to its QML engine as a Quick Controls style.
+  # It then does `import kvantum`, fails to build the dialog, and segfaults:
+  #
+  #   QQmlApplicationEngine failed to load component
+  #   qrc:/qml/QuickAuthDialog.qml: module "kvantum" is not installed
+  #   niri-flake-polkit.service: Main process exited, code=killed, status=11/SEGV
+  #
+  # So every GUI privilege prompt died before drawing — polkitd logged "FAILED to
+  # authenticate" with no dialog, which is why `fprintd-enroll` returned
+  # PermissionDenied instead of prompting.
+  #
+  # Setting QT_QUICK_CONTROLS_STYLE does NOT help: the agent inherits it and
+  # overrides it with QT_STYLE_OVERRIDE at runtime anyway (measured — the service
+  # had QT_QUICK_CONTROLS_STYLE=Fusion in its environment and still crashed).
+  # Dropping the variable for this one unit is what actually works, confirmed by
+  # running the agent by hand with it unset: the dialog rendered and authorization
+  # succeeded. Cost is that the password dialog uses Qt's default style instead of
+  # Kvantum; every other Qt app keeps the Stylix theme.
+  systemd.user.services.niri-flake-polkit.serviceConfig.UnsetEnvironment = "QT_STYLE_OVERRIDE";
 }
