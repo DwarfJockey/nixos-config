@@ -31,11 +31,17 @@ in
   # performance on AC, power-saver on battery. The oneshot does the D-Bus call
   # (ordered after PPD so the boot run doesn't race it); udev only kicks it on
   # plug/unplug with --no-block, which is safe inside a RUN+ rule.
+  #
+  # WantedBy PPD, not multi-user.target: upstream's PPD unit is now
+  # `After=multi-user.target` + `WantedBy=graphical.target`, so hanging this
+  # oneshot off multi-user.target (which forces Before=multi-user.target) plus
+  # `After=power-profiles-daemon` formed an unbreakable ordering cycle. Binding
+  # to PPD pulls us in and orders us right after it, wherever PPD starts.
   systemd.services.power-profile-auto = {
     description = "Set power profile from AC-adapter state";
     after = [ "power-profiles-daemon.service" ];
     wants = [ "power-profiles-daemon.service" ];
-    wantedBy = [ "multi-user.target" ];
+    wantedBy = [ "power-profiles-daemon.service" ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = setPowerProfile;
