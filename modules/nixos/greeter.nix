@@ -22,7 +22,12 @@ in
     enable = true;
 
     settings = {
-      session.default = "niri"; # picker label; list with `noctalia-greeter sessions`
+      # Picker *label* (the .desktop Name=), not the .desktop id — verified with
+      # `noctalia-greeter sessions`, which prints "Niri". Sessions are discovered
+      # via XDG_DATA_DIRS (nixpkgs puts displayManager.sessionData.desktops first
+      # there, and greetd's PAM stack runs pam_env); the greeter's other hardcoded
+      # NixOS path, /run/current-system/sw/share/wayland-sessions, does not exist.
+      session.default = "Niri";
       user.default = "robert";
 
       appearance = {

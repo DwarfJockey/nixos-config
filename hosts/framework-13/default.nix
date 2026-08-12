@@ -1,7 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 
 {
   imports = [
+    inputs.noctalia-greeter.nixosModules.default
+
     ./hardware-configuration.nix
     ./disko.nix
     ../../modules/nixos/boot.nix
@@ -12,6 +14,7 @@
     ../../modules/nixos/boot-defaults.nix
     ../../modules/nixos/power.nix
     ../../modules/nixos/desktop.nix
+    ../../modules/nixos/greeter.nix
     ../../modules/nixos/theming.nix
     ../../modules/nixos/persistence.nix
     ../../modules/nixos/firmware.nix

@@ -39,27 +39,13 @@ let
   # Single Stylix scheme (dark polarity); reuse it for both variants since mode=dark.
   noctaliaStylixPalette = { dark = noctaliaVariant; light = noctaliaVariant; };
 
-  # Wallpaper: the vendored photo remapped onto the base16 palette (lutgen, with
-  # luminosity preserved so the photo's structure survives the hue shift) and
-  # then dimmed toward the theme background — a subtle, on-theme backdrop rather
-  # than a busy neon photo. Built in the Nix store like any other asset, so it
-  # survives the ephemeral root and keeps the niri overview backdrop filled.
-  # Colors come from the scheme, so the wallpaper tracks it. Dim is tunable:
-  # -colorize 30% = blend 30% toward base00 (higher = darker/flatter);
-  # -modulate 100,80,100 = 80% saturation (lower = greyer).
-  wallpaperSrc = ../wallpapers/acrylic-pour-magenta-cyan.jpg;
-  base16Palette = with config.lib.stylix.colors; [
-    base00 base01 base02 base03 base04 base05 base06 base07
-    base08 base09 base0A base0B base0C base0D base0E base0F
-  ];
-  themedWallpaper = pkgs.runCommand "wallpaper-themed.png" { } ''
-    ${pkgs.lutgen}/bin/lutgen apply -P -o recolored.png ${wallpaperSrc} -- \
-      ${lib.concatStringsSep " " base16Palette}
-    ${pkgs.imagemagick}/bin/magick recolored.png \
-      -modulate 100,80,100 \
-      -fill "${stylixColors.base00}" -colorize 30% \
-      $out
-  '';
+  # Themed wallpaper. Lives in modules/wallpaper.nix because the Noctalia greeter
+  # (modules/nixos/greeter.nix) shows the same image and can't reach into
+  # home-manager scope for it. Same args => same store path, so sharing it is free.
+  themedWallpaper = import ../../wallpaper.nix {
+    inherit pkgs lib;
+    colors = config.lib.stylix.colors;
+  };
 in
 {
   imports = [
@@ -184,17 +170,20 @@ in
 
       control_center.sidebar_section = "none";
 
-      # Runs once per Noctalia start (per session), when its IPC is ready. Two jobs:
-      # 1. Re-assert the themed wallpaper. On a fresh boot Noctalia regenerates its
-      #    non-persisted runtime state from its OWN bundled default and ignores
-      #    config.toml's wallpaper path, so wallpaper-set is the only lever that
-      #    applies it — do this BEFORE locking so the lock screen shows it too.
-      #    (The home.activation hook above covers the switch-without-reboot case,
-      #    where Noctalia keeps running and this hook doesn't re-fire.)
-      # 2. Lock the session, so the autologin boots straight to the lock screen.
+      # Runs once per Noctalia start (per session), when its IPC is ready:
+      # re-assert the themed wallpaper. On a fresh boot Noctalia regenerates its
+      # non-persisted runtime state from its OWN bundled default and ignores
+      # config.toml's wallpaper path, so wallpaper-set is the only lever that
+      # applies it. (The home.activation hook above covers the
+      # switch-without-reboot case, where Noctalia keeps running and this hook
+      # doesn't re-fire.)
+      #
+      # This used to also `msg session lock`, so passwordless autologin landed on
+      # the lock screen. Noctalia Greeter (modules/nixos/greeter.nix) is the login
+      # step now, so locking a session the user just authenticated into would be
+      # pure friction. Super+L (niri.nix) and idle lock are unaffected.
       hooks.started = "${pkgs.writeShellScript "noctalia-started" ''
         ${noctaliaBin} msg wallpaper-set "${themedWallpaper}"
-        ${noctaliaBin} msg session lock
       ''}";
 
       location.auto_locate  = true;
