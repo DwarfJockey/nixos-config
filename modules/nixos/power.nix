@@ -1,16 +1,6 @@
 { pkgs, ... }:
 
 let
-  # port10 = Bluetooth radio (ACPI \_SB_.PC00.XHCI.RHUB.HS10.BTRT),
-  # port9  = fingerprint reader. Both are internal USB2 devices on usb3.
-  ports = [ "usb3-port9" "usb3-port10" ];
-  toggle = val: pkgs.writeShellScript "usb-wedged-ports-${val}" ''
-    for p in ${toString (map (n: "/sys/bus/usb/devices/usb3/*/${n}/disable") ports)}; do
-      [ -w "$p" ] && echo ${val} > "$p" || true
-    done
-    exit 0
-  '';
-
   # PPD doesn't auto-switch on AC/battery, so drive it from the AC-adapter state:
   # performance on mains, power-saver on battery. ACAD is the Framework's Mains
   # power_supply node.
@@ -78,27 +68,14 @@ in
     HandlePowerKeyLongPress = "poweroff"; # long-press still hard powers off
   };
 
-  # The internal USB2 ports for Bluetooth (port10) and the fingerprint reader
-  # (port9) currently fail to enumerate and retry forever (~8s each), every retry
-  # an in-flight usb_hub_wq hub_event. On suspend that blocks the s2idle task
-  # freezer (Freezing remaining freezable tasks failed ... wq_busy=1), so suspend
-  # aborts and resume comes back with an unresponsive screen. Disable the ports
-  # only across the suspend transition and re-enable them on resume — don't kill
-  # them permanently, in case a full power-drain later revives the hardware.
-  systemd.services.suspend-quiesce-wedged-usb = {
-    description = "Quiesce non-enumerating internal USB ports (BT/fingerprint) across suspend";
-    before = [ "sleep.target" ];
-    wantedBy = [ "sleep.target" ];
-    # WantedBy only governs starting. StopWhenUnneeded makes systemd stop this
-    # unit once sleep.target deactivates on resume, which is what fires ExecStop
-    # (re-enable the ports) — without it the RemainAfterExit unit lingers and the
-    # ports stay disabled after resume.
-    unitConfig.StopWhenUnneeded = true;
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = "${toggle "1"}";
-      ExecStop = "${toggle "0"}";
-    };
-  };
+  # Removed: `suspend-quiesce-wedged-usb`, which disabled the internal USB2 ports
+  # for Bluetooth (port10) and the fingerprint reader (port9) across suspend. They
+  # used to fail to enumerate and retry forever, each retry an in-flight
+  # usb_hub_wq hub_event that blocked the s2idle task freezer ("Freezing remaining
+  # freezable tasks failed ... wq_busy=1"), aborting suspend and resuming to an
+  # unresponsive screen. That no longer reproduces: both devices now enumerate
+  # cleanly on every boot and resume, with no descriptor-read or enumerate errors
+  # in the kernel log. If unresponsive resumes come back, check
+  # `journalctl -b -k | grep -E 'unable to enumerate|Freezing.*failed'` first —
+  # the workaround is in git history.
 }
