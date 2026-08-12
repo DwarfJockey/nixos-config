@@ -45,9 +45,9 @@ let
   # than a busy neon photo. Built in the Nix store like any other asset, so it
   # survives the ephemeral root and keeps the niri overview backdrop filled.
   # Colors come from the scheme, so the wallpaper tracks it. Dim is tunable:
-  # -colorize 55% = blend 55% toward base00 (higher = darker/flatter);
+  # -colorize 30% = blend 30% toward base00 (higher = darker/flatter);
   # -modulate 100,80,100 = 80% saturation (lower = greyer).
-  wallpaperSrc = ../wallpapers/demon-city-shinjuku.jpg;
+  wallpaperSrc = ../wallpapers/acrylic-pour-magenta-cyan.jpg;
   base16Palette = with config.lib.stylix.colors; [
     base00 base01 base02 base03 base04 base05 base06 base07
     base08 base09 base0A base0B base0C base0D base0E base0F
@@ -57,7 +57,7 @@ let
       ${lib.concatStringsSep " " base16Palette}
     ${pkgs.imagemagick}/bin/magick recolored.png \
       -modulate 100,80,100 \
-      -fill "${stylixColors.base00}" -colorize 55% \
+      -fill "${stylixColors.base00}" -colorize 30% \
       $out
   '';
 in
