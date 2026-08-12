@@ -6,7 +6,7 @@ misbehaving target: `stylix.targets.<name>.enable = false`.
 ## Stylix (the source of truth)
 
 Stylix (NixOS module, configured in `modules/nixos/theming.nix`) owns system-wide theming
-from a single base16 scheme — an inline "Over-Engineered Dark" palette (`base16Scheme` set
+from a single base16 scheme — an inline "Framework Anodized" palette (`base16Scheme` set
 as an attrset of `base00`..`base0F`), `polarity = "dark"` — driving colors, fonts, cursor
 (phinger-dark), icons (Papirus-Dark), and window opacity
 (`stylix.opacity.desktop`/`popups`).
