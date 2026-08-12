@@ -38,7 +38,10 @@
 
     niri = {
       url = "github:sodiboo/niri-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # Deliberately NOT following nixpkgs: niri-unstable needs libdisplay-info
+      # 0.2.0, which nixpkgs-unstable removed (2026-08-04). niri-flake pins its
+      # own compatible nixpkgs, and this also enables its binary cache. Restore
+      # the follows once niri-flake migrates to libdisplay-info 0.3.
     };
 
     agenix = {
