@@ -27,9 +27,9 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
 
 - **Palette:** builds a `customPalettes.Stylix` palette from `config.lib.stylix.colors`,
   selected with `theme = { source = "custom"; custom_palette = "Stylix"; mode = "dark"; }`.
-- **Opacity:** reads `config.stylix.opacity` and applies `.desktop` to the Noctalia bar
-  (`bar.main.background_opacity`) and `.popups` to the niri `^noctalia-` panels/popups
-  layer-rule.
+- **Opacity:** reads `config.stylix.opacity` and applies `.desktop` to both Noctalia bars
+  (`bar.main`/`bar.bottom`'s `background_opacity`) and `.popups` to the niri `^noctalia-`
+  panels/popups layer-rule.
 
 ## niri (target-driven, one override)
 
@@ -40,18 +40,16 @@ colors / `focus-ring` target-driven.
 
 ## Shadows (split by surface type)
 
-- **niri owns shadows for windows and the bar**, where the surface hugs its visible
-  content. niri's three presets (`baseShadow`/`activeShadow`/`popupShadow` in `desktop.nix`)
-  approximate Material-3 elevation Levels 1/3/5 — a single drop shadow each, since niri
-  can't layer umbra/penumbra/ambient — applied to tiled/active/floating windows and the
-  `^noctalia-bar` layer-rule.
-- **Noctalia draws its own shadows for its popups/panels** (`shell.shadow.alpha = 0.55`,
-  `shell.panel.shadow = true`; color from the palette's `mShadow` = base00): niri can't clip
-  a layer-surface shadow to a *floating popup's* visible card (it shadows the whole surface
+- **niri owns window shadows.** Its three presets (`baseShadow`/`activeShadow`/`popupShadow`
+  in `niri.nix`) approximate Material-3 elevation Levels 1/3/5 — a single drop shadow each,
+  since niri can't layer umbra/penumbra/ambient — applied to tiled/active/floating windows.
+- **Noctalia draws its own shadows for every surface it owns** — bars, dock, popups, panels
+  (`shell.shadow.alpha = 0.55`, `shell.panel.shadow = true`, `bar.*.shadow = true`,
+  `dock.shadow = true`; color from the palette's `mShadow` = base00). niri can't clip a
+  layer-surface shadow to a *floating popup's* visible card (it shadows the whole surface
   including invisible margins), so the `^noctalia-` popup layer-rule carries no niri shadow —
-  only opacity and corner-radius.
-- The bar's own Noctalia shadows stay off (`bar.main.shadow`/`contact_shadow` = false), as
-  does `dock.shadow`.
+  only opacity and corner-radius — and there is no `^noctalia-bar` shadow rule at all.
+- `bar.main.contact_shadow` stays false.
 
 ## Targets that keep their own theming
 

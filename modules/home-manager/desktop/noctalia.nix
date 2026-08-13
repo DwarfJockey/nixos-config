@@ -77,6 +77,17 @@ in
   # here gives it a 3s grace period, then SIGKILL (harmless — its runtime state is
   # non-persisted). Bound to graphical-session.target: niri --session imports the
   # Wayland env into the user manager, so the socket is reachable.
+  #
+  # Type = dbus makes the unit reach "active" only once Noctalia owns
+  # org.kde.StatusNotifierWatcher — it hosts the system tray, and it connects to the
+  # bus seconds before QML instantiates that service. Without this, After= on this
+  # unit would only mean "the process was exec'd", which is useless to tray clients:
+  # Electron checks NameHasOwner() once at tray-creation and never retries, so
+  # 1password/vesktop silently came up with no tray icon (see niri.nix).
+  # ponytail: couples the shell's readiness to that one bus name — if a future
+  # Noctalia stops claiming it, the unit stalls in `activating` for TimeoutStartSec
+  # (90s) then fails into the Restart loop, taking the bar with it. Then: back to
+  # Type = simple, and move the wait into the tray apps' ExecStartPre.
   systemd.user.services.noctalia = {
     Unit = {
       Description = "Noctalia shell (bar / dock / control-center / lock)";
@@ -86,6 +97,8 @@ in
     };
     Service = {
       ExecStart      = noctaliaBin;
+      Type           = "dbus";
+      BusName        = "org.kde.StatusNotifierWatcher";
       Restart        = "on-failure";
       TimeoutStopSec = 3;
     };
@@ -103,6 +116,12 @@ in
         mode           = "dark";
         source         = "custom";
         custom_palette = "Stylix";
+        # Stylix owns every themed target in this repo; Noctalia's own template
+        # engine would fight it.
+        templates = {
+          enable_builtin_templates   = false;
+          enable_community_templates = false;
+        };
       };
 
       # base16-recolored, dimmed wallpaper generated in the Nix store; see
@@ -111,35 +130,70 @@ in
       wallpaper = {
         default.path = "${themedWallpaper}";
         automation.enabled = false;
+        transition = [ "fade" ];
       };
 
-      bar.main = {
-        position = "top";
-        enabled  = true;
-        start  = [ "launcher" "workspaces" ];
-        center = [ "notifications" "clock" "weather" ];
-        end    = [ "tray" "clipboard" "volume" "bluetooth" "network" "battery" ];
-        # Flat bar restyle. Neutral on_surface/outline roles (blue mPrimary only
-        # on active states) so the bar reads like a libadwaita panel rather than
-        # a purple-tinted (secondary) one.
-        capsule            = false;
-        capsule_opacity    = 0.0;
-        capsule_border     = "outline";
-        capsule_radius     = 0;
-        color              = "on_surface";
-        font_weight        = 400;
-        thickness          = 32;
-        background_opacity = stylixOpacity.desktop;
-        padding            = 12;
-        widget_spacing     = 12;
-        radius             = 15;
-        border_width       = 1.0;
-        # Bar shadow stays niri-owned (anchored full-width surface; niri places
-        # it correctly). Noctalia only draws shadows for its popups/panels.
-        shadow             = false;
-        contact_shadow     = false;
-        margin_ends        = 0;
-        margin_edge        = 0;
+      bar = {
+        order = [ "main" "bottom" ];
+
+        main = {
+          position = "top";
+          enabled  = true;
+          start  = [ "workspaces" ];
+          center = [ "clock" "notifications" ];
+          end    = [ "network" "volume" "battery" ];
+          # Flat bar restyle. Neutral on_surface/outline roles (blue mPrimary only
+          # on active states) so the bar reads like a libadwaita panel rather than
+          # a purple-tinted (secondary) one.
+          capsule            = false;
+          capsule_opacity    = 0.0;
+          capsule_border     = "outline";
+          # capsule_radius omitted = automatic pill radius (Noctalia only reads a
+          # number here; the GUI's "auto" is the absent key).
+          color              = "on_surface";
+          font_weight        = 400;
+          thickness          = 32;
+          background_opacity = stylixOpacity.desktop;
+          padding            = 12;
+          widget_spacing     = 12;
+          radius             = 15;
+          border_width       = 1.0;
+          # Bar shadow is Noctalia-drawn now; the matching niri layer-rule for
+          # ^noctalia-bar is gone from niri.nix.
+          shadow             = true;
+          contact_shadow     = false;
+          margin_ends        = 0;
+          margin_edge        = 0;
+        };
+
+        # Second bar along the bottom edge. Everything not listed here stays at
+        # Noctalia's bar defaults (margins, capsule, colors, shadow).
+        bottom = {
+          position = "bottom";
+          enabled  = true;
+          # term/browser/files are custom_button instances and spacer_2 is a spacer
+          # instance; both are defined under `widget` below. spacer_2 is deliberately
+          # reused in all three zones — one instance, one set of settings.
+          start  = [ "launcher" "spacer_2" "term" "browser" "files" "tray" ];
+          center = [ "media" "spacer_2" "weather" ];
+          end    = [ "cpu" "ram" "spacer_2" "clipboard" "caffeine" "nightlight" "bluetooth" "session" ];
+          thickness          = 32;
+          background_opacity = stylixOpacity.desktop;
+          padding            = 12;
+          widget_spacing     = 12;
+          radius             = 15;
+          # Square off the two corners that sit on the screen edge.
+          radius_bottom_left  = 0;
+          radius_bottom_right = 0;
+          border_width       = 1.0;
+          reserve_space      = false;
+          # Plain auto-hide: reveal on pointer approach only. smart_auto_hide (hide
+          # only when a window would overlap) is explicitly off, and the bar no longer
+          # peeks on workspace switch.
+          auto_hide                = true;
+          smart_auto_hide          = false;
+          show_on_workspace_switch = false;
+        };
       };
 
       shell = {
@@ -152,11 +206,23 @@ in
         font_family = "Adwaita Sans";
         settings_show_advanced = true;
         app_icon_colorize = false;
+        # Panels attach to the bottom bar when they have no source bar.
+        panel_anchor_bar = "bottom";
         panel = {
-          session_placement = "centered";
           transparency_mode = "glass";
+          # placement: attached | floating (the only two values Noctalia accepts).
           control_center_placement = "floating";
+          session_placement        = "floating";
+          wallpaper_placement      = "floating";
+          # "auto" = position the floating panel from the bar click, not screen centre.
+          launcher_position  = "auto";
+          clipboard_position = "auto";
+          polkit_position    = "auto";
           open_near_click_control_center = true;
+          open_near_click_launcher       = true;
+          open_near_click_clipboard      = true;
+          open_near_click_session        = true;
+          open_near_click_wallpaper      = true;
           # Noctalia draws popup/panel shadows (content-aware) since niri can't
           # place a layer-surface shadow on a floating popup card. Color = the
           # palette's mShadow (base00).
@@ -165,10 +231,17 @@ in
         shadow.alpha = 0.55;
       };
 
-      # dock.shadow defaults to true — disable so no Noctalia surface casts a shadow.
-      dock.shadow = false;
+      dock.shadow = true;
 
-      control_center.sidebar_section = "none";
+      control_center = {
+        sidebar         = "none";
+        sidebar_section = "none";
+      };
+
+      audio.enable_sounds = true;
+      backdrop.enabled    = true;
+      battery.warning_threshold = 20;
+      calendar.enabled    = true;
 
       # Runs once per Noctalia start (per session), when its IPC is ready:
       # re-assert the themed wallpaper. On a fresh boot Noctalia regenerates its
@@ -187,7 +260,7 @@ in
       ''}";
 
       location.auto_locate  = true;
-      nightlight.enabled    = true;
+      nightlight            = { enabled = true; temperature_day = 5000; };
       notification.position = "top_center";
       osd.position          = "bottom_center";
       weather.unit          = "imperial";
@@ -195,12 +268,47 @@ in
       widget = {
         battery       = { hide_when_full = true; show_label = false; };
         brightness.show_label = false;
-        clock         = { anchor = false; format = "{:%l:%M %P}"; };
+        clock         = { anchor = true; format = "{:%l:%M %P}"; tooltip_format = "%A %B %e"; };
+        media         = { anchor = false; hide_when_no_media = true; title_scroll = "always"; };
         network.show_label = false;
         notifications.hide_when_no_unread = true;
-        tray.drawer   = true;
+        # Tray moved to the bottom bar's start zone; items sit inline, not behind a
+        # drawer button.
+        tray.drawer   = false;
         volume.show_label = false;
-        workspaces    = { display = "name"; minimal = true; };
+        # Bare separator instance. Like the custom_button entries below, the name is
+        # arbitrary, so it needs an explicit type.
+        spacer_2      = { type = "spacer"; };
+        # `display`/`minimal` are pre-v5 names Noctalia no longer reads.
+        workspaces    = { style = "minimal"; };
+
+        # App launcher buttons on the bottom bar. Unlike every entry above — which are
+        # bare built-in widget types — these are arbitrary instance names, so each needs
+        # an explicit `type`. custom_image takes a raw filesystem path: Noctalia's XDG
+        # icon-theme resolver is wired only into the taskbar/tray widgets, so an icon
+        # *name* here renders nothing. A bad path fails silently (blank button), so keep
+        # these interpolated from the packages rather than hand-written.
+        # `command` goes to runAsync, not a shell — no pipes/globs without `sh -c`.
+        # Commands match the Mod+T / Mod+B / Mod+E binds in niri.nix.
+        term = {
+          type         = "custom_button";
+          custom_image = "${config.programs.ghostty.package}/share/icons/hicolor/256x256/apps/com.mitchellh.ghostty.png";
+          tooltip      = "Ghostty";
+          command      = "ghostty";
+        };
+        browser = {
+          type         = "custom_button";
+          # .unwrapped: the zen-browser wrapper derivation ships no share/ at all.
+          custom_image = "${config.programs.zen-browser.package.unwrapped}/share/icons/hicolor/128x128/apps/zen-twilight.png";
+          tooltip      = "Zen Browser";
+          command      = "zen-twilight";
+        };
+        files = {
+          type         = "custom_button";
+          custom_image = "${pkgs.nautilus}/share/icons/hicolor/scalable/apps/org.gnome.Nautilus.svg";
+          tooltip      = "Files";
+          command      = "nautilus";
+        };
       };
     };
   };
