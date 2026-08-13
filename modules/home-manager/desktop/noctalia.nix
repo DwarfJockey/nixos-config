@@ -39,6 +39,14 @@ let
   # Single Stylix scheme (dark polarity); reuse it for both variants since mode=dark.
   noctaliaStylixPalette = { dark = noctaliaVariant; light = noctaliaVariant; };
 
+  # App icons for the bar launcher buttons, taken from the icon theme Stylix already
+  # sets system-wide (theming.nix) rather than from each app's own package, so they
+  # restyle together with the rest of the desktop. Both the package and the theme
+  # directory name come from the Stylix options, so changing the theme moves these
+  # with it. 128x128 is the largest Papirus ships; Noctalia renders at
+  # round(48 * contentScale), and these are SVGs anyway.
+  papirusApps = "${config.stylix.icons.package}/share/icons/${config.stylix.icons.dark}/128x128/apps";
+
   # Themed wallpaper. Lives in modules/wallpaper.nix because the Noctalia greeter
   # (modules/nixos/greeter.nix) shows the same image and can't reach into
   # home-manager scope for it. Same args => same store path, so sharing it is free.
@@ -287,25 +295,26 @@ in
         # an explicit `type`. custom_image takes a raw filesystem path: Noctalia's XDG
         # icon-theme resolver is wired only into the taskbar/tray widgets, so an icon
         # *name* here renders nothing. A bad path fails silently (blank button), so keep
-        # these interpolated from the packages rather than hand-written.
+        # these interpolated from papirusApps rather than hand-written.
         # `command` goes to runAsync, not a shell — no pipes/globs without `sh -c`.
         # Commands match the Mod+T / Mod+B / Mod+E binds in niri.nix.
+        # term/browser use Papirus' generic freedesktop icons rather than the
+        # per-app logos, so the three buttons read as a matched set.
         term = {
           type         = "custom_button";
-          custom_image = "${config.programs.ghostty.package}/share/icons/hicolor/256x256/apps/com.mitchellh.ghostty.png";
+          custom_image = "${papirusApps}/utilities-terminal.svg";
           tooltip      = "Ghostty";
           command      = "ghostty";
         };
         browser = {
           type         = "custom_button";
-          # .unwrapped: the zen-browser wrapper derivation ships no share/ at all.
-          custom_image = "${config.programs.zen-browser.package.unwrapped}/share/icons/hicolor/128x128/apps/zen-twilight.png";
+          custom_image = "${papirusApps}/internet-web-browser.svg";
           tooltip      = "Zen Browser";
           command      = "zen-twilight";
         };
         files = {
           type         = "custom_button";
-          custom_image = "${pkgs.nautilus}/share/icons/hicolor/scalable/apps/org.gnome.Nautilus.svg";
+          custom_image = "${papirusApps}/org.gnome.Nautilus.svg";
           tooltip      = "Files";
           command      = "nautilus";
         };
