@@ -10,7 +10,7 @@
 
     # Formatter binaries for conform.nvim (put on nvim's runtime PATH).
     extraPackages = [
-      pkgs.nixfmt-rfc-style
+      pkgs.nixfmt
       pkgs.stylua
       pkgs.black
       pkgs.prettier
