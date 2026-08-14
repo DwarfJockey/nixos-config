@@ -40,6 +40,16 @@ in
   # Nushell
   programs.nushell = {
     enable = true;
+
+    # home.sessionVariables only reaches hm-session-vars.sh (a POSIX script) and, for a
+    # subset, environment.d for the systemd user manager. nushell is the login shell and
+    # reads neither, so every HM session variable — EDITOR/VISUAL=nvim included — was
+    # silently dropped in interactive shells. Values containing "$" are skipped: those are
+    # POSIX expansions (XDG_CONFIG_DIRS is "${XDG_CONFIG_DIRS:+…}") that nushell would take
+    # literally, and it already inherits a correct value for them from the session.
+    environmentVariables =
+      lib.filterAttrs (_: v: !(lib.hasInfix "$" (toString v))) config.home.sessionVariables;
+
     extraConfig = ''
      let carapace_completer = {|spans|
      carapace $spans.0 nushell ...$spans | from json
