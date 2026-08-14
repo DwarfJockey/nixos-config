@@ -54,6 +54,9 @@ let
     inherit pkgs lib;
     colors = config.lib.stylix.colors;
   };
+
+  # This repo's checkout, for the nix-monitor plugin's Update button.
+  configDir = "${config.home.homeDirectory}/Projects/nixos-config";
 in
 {
   imports = [
@@ -112,6 +115,14 @@ in
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
+
+  # Noctalia scans $XDG_DATA_HOME/noctalia/plugins as its last (highest-precedence)
+  # plugin root with no config needed, so a single symlink is the whole install —
+  # each subdirectory holding a plugin.toml is one plugin, and the scan follows
+  # symlinks. ~/.local/share is not persisted, but home-manager-robert.service runs
+  # at boot and re-creates this, same as every other HM dotfile on the ephemeral root.
+  xdg.dataFile."noctalia/plugins/nix-monitor".source =
+    "${inputs.noctalia-plugins}/nix-monitor";
 
   # Noctalia shell
   programs.noctalia = {
@@ -184,7 +195,8 @@ in
           # reused in all three zones — one instance, one set of settings.
           start  = [ "launcher" "spacer_2" "term" "browser" "files" "tray" ];
           center = [ "media" "spacer_2" "weather" ];
-          end    = [ "cpu" "ram" "spacer_2" "clipboard" "caffeine" "nightlight" "bluetooth" "session" ];
+          end    = [ "cpu" "ram" "spacer_2" "clipboard" "caffeine" "nightlight" "bluetooth"
+                     "avivbintangaringga/nix-monitor:nix-monitor" "session" ];
           thickness          = 32;
           background_opacity = stylixOpacity.desktop;
           padding            = 12;
@@ -273,6 +285,36 @@ in
       osd.position          = "bottom_center";
       weather.unit          = "imperial";
 
+      # Discovery alone doesn't load a plugin — the id has to be listed in `enabled`
+      # too. `source = []` is load-bearing: with the key absent Noctalia seeds its two
+      # built-in git sources (official + community) and re-clones both (~16MB) into
+      # ~/.local/state/noctalia, which impermanence wipes — so that ran on every boot.
+      # An explicit empty array suppresses it (Noctalia probes the raw table for the
+      # array, so [] counts as configured while a missing key does not). Cost: the
+      # in-shell plugin store browser is empty; plugins get added here instead, which
+      # is the only way they'd survive a reboot anyway.
+      plugins = {
+        source      = [ ];
+        enabled     = [ "avivbintangaringga/nix-monitor" ];
+        auto_update = false;
+      };
+
+      # Plugin-level settings (the manifest's root [[setting]] block), as opposed to
+      # the per-widget-instance ones under `widget` below.
+      plugin_settings."avivbintangaringga/nix-monitor" = {
+        # The branch the local nixpkgs rev is compared against; matches the nixpkgs
+        # input in flake.nix.
+        branch = "nixos-unstable";
+        # The panel's Update button. Run through `sh -lc` in a terminal, so `cd` and
+        # `&&` are fine. Only the nixpkgs input is bumped — `niri` is deliberately
+        # un-followed (flake.nix) and must stay pinned. Writes flake.lock; review and
+        # commit that as usual. optimize_command/clean_command keep their defaults
+        # (nix-store --optimise -vv / nix-collect-garbage -d).
+        update_command = "cd ${configDir} && nix flake update nixpkgs && sudo nixos-rebuild switch --flake .#framework-13";
+        panel_card_color   = "surface_variant";
+        panel_card_opacity = 70;
+      };
+
       widget = {
         battery       = { hide_when_full = true; show_label = false; };
         brightness.show_label = false;
@@ -289,6 +331,24 @@ in
         spacer_2      = { type = "spacer"; };
         # `display`/`minimal` are pre-v5 names Noctalia no longer reads.
         workspaces    = { style = "minimal"; };
+
+        # nix-monitor plugin widget (installed via xdg.dataFile above). The instance
+        # name is the full plugin entry id, which is also what goes in the bar zone —
+        # Noctalia resolves an unknown widget type through the plugin registry, so no
+        # `type` key here. Glyph-only to match its neighbours (battery/network/volume
+        # all set show_label = false). The state colours are another manual Stylix
+        # bridge: the plugin ships hard-coded #57ff57/#ffeb57/#ff5757 that would fight
+        # the palette, so they're mapped onto Noctalia roles (which come from
+        # customPalettes.Stylix above) instead. mPrimary/blue for "update available"
+        # follows the bar's rule of accenting only actionable states.
+        "avivbintangaringga/nix-monitor:nix-monitor" = {
+          show_text              = false;
+          colorize_glyph         = true;
+          up_to_date_color       = "on_surface";
+          checking_color         = "on_surface_variant";
+          update_available_color = "primary";
+          unknown_color          = "on_surface_variant";
+        };
 
         # App launcher buttons on the bottom bar. Unlike every entry above — which are
         # bare built-in widget types — these are arbitrary instance names, so each needs

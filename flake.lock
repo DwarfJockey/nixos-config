@@ -595,6 +595,22 @@
         "type": "github"
       }
     },
+    "noctalia-plugins": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786747190,
+        "narHash": "sha256-y0L2ZmecntGxkdZzF/K6CmVlfVllzFCY94Uuj3KyPtM=",
+        "owner": "noctalia-dev",
+        "repo": "community-plugins",
+        "rev": "c5092639e35e80bfcaf827dc219fcb719f2f88fb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "noctalia-dev",
+        "repo": "community-plugins",
+        "type": "github"
+      }
+    },
     "nur": {
       "inputs": {
         "flake-parts": [
@@ -634,6 +650,7 @@
         "nixvim": "nixvim",
         "noctalia": "noctalia",
         "noctalia-greeter": "noctalia-greeter",
+        "noctalia-plugins": "noctalia-plugins",
         "stylix": "stylix",
         "zen-browser": "zen-browser"
       }

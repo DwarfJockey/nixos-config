@@ -25,6 +25,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    noctalia-plugins = {
+      # Noctalia community plugins, pinned for the nix-monitor widget
+      # (modules/home-manager/desktop/noctalia.nix). Not a flake — just a tree of
+      # plugin directories, each with a plugin.toml.
+      url = "github:noctalia-dev/community-plugins";
+      flake = false;
+    };
+
     noctalia-greeter = {
       # greetd greeter matching the Noctalia shell. Separate repo from `noctalia`
       # above — the shell only ships a *sync* helper for it, not the greeter.
