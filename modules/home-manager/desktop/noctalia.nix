@@ -356,7 +356,10 @@ in
         # icon-theme resolver is wired only into the taskbar/tray widgets, so an icon
         # *name* here renders nothing. A bad path fails silently (blank button), so keep
         # these interpolated from papirusApps rather than hand-written.
-        # `command` goes to runAsync, not a shell — no pipes/globs without `sh -c`.
+        # Gestures bind under `actions` (left/right/middle/scroll_*). `exec <cmd>`
+        # goes to runAsync, not a shell — no pipes/globs without `sh -c`. Before
+        # Noctalia 5.0 these were flat `command`/`right_command`/… keys; 5.0 still
+        # migrates them, but warns on every launch until the source is updated.
         # Commands match the Mod+T / Mod+B / Mod+E binds in niri.nix.
         # term/browser use Papirus' generic freedesktop icons rather than the
         # per-app logos, so the three buttons read as a matched set.
@@ -364,19 +367,19 @@ in
           type         = "custom_button";
           custom_image = "${papirusApps}/utilities-terminal.svg";
           tooltip      = "Ghostty";
-          command      = "ghostty";
+          actions.left = "exec ghostty";
         };
         browser = {
           type         = "custom_button";
           custom_image = "${papirusApps}/internet-web-browser.svg";
           tooltip      = "Zen Browser";
-          command      = "zen-twilight";
+          actions.left = "exec zen-twilight";
         };
         files = {
           type         = "custom_button";
           custom_image = "${papirusApps}/org.gnome.Nautilus.svg";
           tooltip      = "Files";
-          command      = "nautilus";
+          actions.left = "exec nautilus";
         };
       };
     };
