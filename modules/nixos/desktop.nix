@@ -1,7 +1,33 @@
 { pkgs, inputs, ... }:
 
 let
-  niriPkg = inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable;
+  niriBase = inputs.niri.packages.${pkgs.stdenv.hostPlatform.system}.niri-unstable;
+
+  # niri-session calls `systemctl --user import-environment` with no arguments,
+  # which systemd deprecated in 258 — every invocation prints a warning. greetd
+  # runs niri-session directly on VT1 with the tty as its stdio, so that warning
+  # paints a yellow line on the bare console in the gap between the greeter
+  # exiting and niri taking over KMS. (noctalia-greeter-session avoids this by
+  # doing `exec >/dev/null 2>&1` and logging to syslog; niri-session has no such
+  # guard.) Upstream still calls it bare, so drop stderr for that one call.
+  #
+  # symlinkJoin rather than overrideAttrs: overriding an attr changes the
+  # derivation hash and rebuilds niri from source, missing niri.cachix.org.
+  # --replace-fail makes the build shout if upstream ever fixes the line.
+  # `niriBase // …` so the join only overrides the store path: niri-flake reads
+  # plain mkDerivation attrs off the package (providedSessions, pname, version,
+  # cargoBuildNoDefaultFeatures, …) that symlinkJoin would otherwise drop.
+  niriPkg = niriBase // pkgs.symlinkJoin {
+    name = "niri-${niriBase.version}";
+    paths = [ niriBase ];
+    postBuild = ''
+      rm $out/bin/niri-session
+      substitute ${niriBase}/bin/niri-session $out/bin/niri-session \
+        --replace-fail 'systemctl --user import-environment' \
+                       'systemctl --user import-environment 2>/dev/null'
+      chmod +x $out/bin/niri-session
+    '';
+  };
 in
 {
   # Niri
