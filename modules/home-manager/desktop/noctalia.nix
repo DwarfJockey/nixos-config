@@ -226,8 +226,11 @@ in
         font_family = "Adwaita Sans";
         settings_show_advanced = true;
         app_icon_colorize = false;
-        # Panels attach to the bottom bar when they have no source bar.
-        panel_anchor_bar = "bottom";
+        # panel_anchor_bar deliberately unset: when set it *overrides* the bar a
+        # panel was opened from, so top-bar widgets would drop their panels at the
+        # bottom. Unset, each panel attaches to its own bar; panels with no source
+        # bar (the Mod+Space / Mod+S keybinds) fall back to the first enabled bar
+        # in `bar.order`, i.e. main.
         panel = {
           transparency_mode = "glass";
           # placement: attached | floating (the only two values Noctalia accepts).
