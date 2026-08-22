@@ -331,8 +331,14 @@ in
         # Bare separator instance. Like the custom_button entries below, the name is
         # arbitrary, so it needs an explicit type.
         spacer_2      = { type = "spacer"; };
-        # `display`/`minimal` are pre-v5 names Noctalia no longer reads.
-        workspaces    = { style = "minimal"; };
+        # `style` is the v5 key (the pre-v5 name was `display`); it takes
+        # regular | minimal | focus_hint. minimal drops the pills and colours the
+        # label text instead. occupied_color would default to `secondary` (dusty
+        # rose) — overridden to on_surface so blue stays the bar's only accent, per
+        # the bar.main comment above. Occupancy itself comes from Noctalia's Umbriel
+        # workspace backend: ext-workspace-v1 carries only active/urgent, so on a
+        # Noctalia build without Umbriel support every tag renders as empty.
+        workspaces    = { style = "minimal"; occupied_color = "on_surface"; };
 
         # nix-monitor plugin widget (installed via xdg.dataFile above). The instance
         # name is the full plugin entry id, which is also what goes in the bar zone —
