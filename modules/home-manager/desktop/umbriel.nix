@@ -57,7 +57,10 @@ in
         Unit = {
           Description = description;
           PartOf = [ "graphical-session.target" ];
-          After = [ "graphical-session.target" "noctalia.service" ];
+          After = [
+            "graphical-session.target"
+            "noctalia.service"
+          ];
         };
         Service.ExecStart = exec;
         Install.WantedBy = [ "graphical-session.target" ];
@@ -163,8 +166,10 @@ in
       input = {
         keyboard.layout = vars.keyboardLayout;
         # Umbriel exposes only tap and natural_scroll for touchpads; dwt and
-        # two-finger scrolling are libinput defaults anyway. click-method has no
-        # Umbriel key, so the clickpad falls back to libinput's buttonareas.
+        # two-finger scrolling are libinput defaults anyway. click-method still has no
+        # Umbriel key, so the clickpad takes libinput's *default* method — which
+        # modules/nixos/desktop.nix flips from buttonareas to clickfinger with a
+        # libinput quirk. So: two-finger *press* = right click, while tap stays off.
         touchpad = {
           tap = false;
           natural_scroll = true;
@@ -189,7 +194,10 @@ in
           match.app_id = "^zen-twilight$";
           match.title = "^Picture-in-Picture$";
           default_floating = true;
-          default_size = [ 480 270 ];
+          default_size = [
+            480
+            270
+          ];
           default_position = {
             x = 32;
             y = 32;
@@ -218,13 +226,19 @@ in
           # is what the current window actually asks for.
           match.app_id = "^dev\\.noctalia\\.Noctalia$";
           default_floating = true;
-          default_size = [ 1020 900 ];
+          default_size = [
+            1020
+            900
+          ];
         }
         {
           # The portal's screen-share picker (xdg-desktop-portal-umbriel).
           match.app_id = "^dev\\.noctalia\\.UmbrielSharePicker$";
           default_floating = true;
-          default_size = [ 800 600 ];
+          default_size = [
+            800
+            600
+          ];
         }
       ];
 
