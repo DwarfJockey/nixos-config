@@ -51,12 +51,20 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    niri = {
-      url = "github:sodiboo/niri-flake";
-      # Deliberately NOT following nixpkgs: niri-unstable needs libdisplay-info
-      # 0.2.0, which nixpkgs-unstable removed (2026-08-04). niri-flake pins its
-      # own compatible nixpkgs, and this also enables its binary cache. Restore
-      # the follows once niri-flake migrates to libdisplay-info 0.3.
+    umbriel = {
+      # Noctalia's own compositor (wlroots 0.20 + SceneFX). Safe to follow
+      # nixpkgs — everything it builds against (wlroots_0_20, libxcb-wm,
+      # xwayland-satellite) is in nixpkgs-unstable, so this keeps one nixpkgs
+      # tree in the lock. Cost: no upstream binary cache, so it builds locally.
+      url = "github:noctalia-dev/umbriel";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    xdg-desktop-portal-umbriel = {
+      # Umbriel's portal backend — ScreenCast + Screenshot. Packages only, no
+      # NixOS module; wired up in modules/nixos/desktop.nix.
+      url = "github:noctalia-dev/xdg-desktop-portal-umbriel";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     agenix = {
@@ -81,20 +89,25 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, zen-browser, firefox-addons, niri, agenix, stylix, ... }@inputs:
+  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, zen-browser, firefox-addons, umbriel, agenix, stylix, ... }@inputs:
+  let
+    # Every personal/host-specific value lives here — see ./vars.nix.
+    vars = import ./vars.nix;
+  in
   {
-    nixosConfigurations.framework-13 = nixpkgs.lib.nixosSystem {
-      specialArgs = { inherit inputs; };
+    nixosConfigurations.${vars.hostname} = nixpkgs.lib.nixosSystem {
+      specialArgs = { inherit inputs vars; };
       modules = [
         { nixpkgs.hostPlatform = "x86_64-linux"; }
+        # Hardware-specific: swap or drop this on anything but a 12th-gen Framework 13.
         nixos-hardware.nixosModules.framework-12th-gen-intel
         impermanence.nixosModules.impermanence
         disko.nixosModules.disko
         home-manager.nixosModules.home-manager
-        niri.nixosModules.niri
+        umbriel.nixosModules.default
         agenix.nixosModules.default
         stylix.nixosModules.stylix
-        ./hosts/framework-13
+        ./hosts
       ];
     };
   };

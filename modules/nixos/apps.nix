@@ -1,30 +1,34 @@
-{ pkgs, ... }:
+{ lib, pkgs, vars, ... }:
 
-{
+lib.mkMerge [
   # 1Password
-  programs._1password.enable = true;
-  programs._1password-gui = {
-    enable = true;
-    polkitPolicyOwners = [ "robert" ];
-  };
+  (lib.mkIf vars.apps.onePassword {
+    programs._1password.enable = true;
+    programs._1password-gui = {
+      enable = true;
+      polkitPolicyOwners = [ vars.username ];
+    };
 
-  environment.etc."1password/custom_allowed_browsers" = {
-    text = ''
-      .zen-twilight-wrapped
-    '';
-    mode = "0755";
-  };
+    environment.etc."1password/custom_allowed_browsers" = {
+      text = ''
+        .zen-twilight-wrapped
+      '';
+      mode = "0755";
+    };
+  })
 
   # Steam
-  programs.steam = {
-    enable = true;
-    package = pkgs.steam.override {
-      extraEnv = {
-        GAMEMODERUN = "1";
+  (lib.mkIf vars.apps.steam {
+    programs.steam = {
+      enable = true;
+      package = pkgs.steam.override {
+        extraEnv = {
+          GAMEMODERUN = "1";
+        };
+        extraArgs = "-system-composer";
       };
-      extraArgs = "-system-composer";
+      remotePlay.openFirewall = true;
     };
-    remotePlay.openFirewall = true;
-  };
-  programs.gamemode.enable = true;
-}
+    programs.gamemode.enable = true;
+  })
+]

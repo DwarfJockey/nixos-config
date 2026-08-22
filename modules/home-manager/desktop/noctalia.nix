@@ -1,4 +1,4 @@
-{ config, lib, pkgs, inputs, ... }:
+{ config, lib, pkgs, inputs, vars, ... }:
 
 let
   noctaliaPkg = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
@@ -56,7 +56,7 @@ let
   };
 
   # This repo's checkout, for the nix-monitor plugin's Update button.
-  configDir = "${config.home.homeDirectory}/Projects/nixos-config";
+  configDir = "${config.home.homeDirectory}/${vars.configDir}";
 in
 {
   imports = [
@@ -82,19 +82,19 @@ in
       fi
     '';
 
-  # Noctalia runs as a user service (not niri spawn-at-startup) so teardown is
-  # bounded: the Quickshell binary ignores SIGTERM, so as a niri-spawned transient
+  # Noctalia runs as a user service (not a compositor autostart) so teardown is
+  # bounded: the Quickshell binary ignores SIGTERM, so as a compositor-spawned transient
   # scope it stalled shutdown for the full 90s DefaultTimeoutStopSec. TimeoutStopSec
   # here gives it a 3s grace period, then SIGKILL (harmless — its runtime state is
-  # non-persisted). Bound to graphical-session.target: niri --session imports the
-  # Wayland env into the user manager, so the socket is reachable.
+  # non-persisted). Bound to graphical-session.target: Umbriel imports the Wayland
+  # env into the user manager before raising the target, so the socket is reachable.
   #
   # Type = dbus makes the unit reach "active" only once Noctalia owns
   # org.kde.StatusNotifierWatcher — it hosts the system tray, and it connects to the
   # bus seconds before QML instantiates that service. Without this, After= on this
   # unit would only mean "the process was exec'd", which is useless to tray clients:
   # Electron checks NameHasOwner() once at tray-creation and never retries, so
-  # 1password/vesktop silently came up with no tray icon (see niri.nix).
+  # 1password/vesktop silently came up with no tray icon (see umbriel.nix).
   # ponytail: couples the shell's readiness to that one bus name — if a future
   # Noctalia stops claiming it, the unit stalls in `activating` for TimeoutStartSec
   # (90s) then fails into the Restart loop, taking the bar with it. Then: back to
@@ -177,8 +177,8 @@ in
           widget_spacing     = 12;
           radius             = 15;
           border_width       = 1.0;
-          # Bar shadow is Noctalia-drawn now; the matching niri layer-rule for
-          # ^noctalia-bar is gone from niri.nix.
+          # Bar shadow is Noctalia-drawn; Umbriel's layer rules carry blur only,
+          # so it has no say in this either way.
           shadow             = true;
           contact_shadow     = false;
           margin_ends        = 0;
@@ -246,8 +246,8 @@ in
           open_near_click_clipboard      = true;
           open_near_click_session        = true;
           open_near_click_wallpaper      = true;
-          # Noctalia draws popup/panel shadows (content-aware) since niri can't
-          # place a layer-surface shadow on a floating popup card. Color = the
+          # Noctalia draws popup/panel shadows (content-aware); Umbriel's single
+          # global shadow covers windows, not layer surfaces. Color = the
           # palette's mShadow (base00).
           shadow = true;
         };
@@ -277,7 +277,7 @@ in
       # This used to also `msg session lock`, so passwordless autologin landed on
       # the lock screen. Noctalia Greeter (modules/nixos/greeter.nix) is the login
       # step now, so locking a session the user just authenticated into would be
-      # pure friction. Super+L (niri.nix) and idle lock are unaffected.
+      # pure friction. Mod+L (umbriel.nix) and idle lock are unaffected.
       hooks.started = "${pkgs.writeShellScript "noctalia-started" ''
         ${noctaliaBin} msg wallpaper-set "${themedWallpaper}"
       ''}";
@@ -309,11 +309,10 @@ in
         # input in flake.nix.
         branch = "nixos-unstable";
         # The panel's Update button. Run through `sh -lc` in a terminal, so `cd` and
-        # `&&` are fine. Only the nixpkgs input is bumped — `niri` is deliberately
-        # un-followed (flake.nix) and must stay pinned. Writes flake.lock; review and
-        # commit that as usual. optimize_command/clean_command keep their defaults
+        # `&&` are fine. Only the nixpkgs input is bumped, so the compositor and shell
+        # stay on their pinned revs. Writes flake.lock; review and commit that as usual. optimize_command/clean_command keep their defaults
         # (nix-store --optimise -vv / nix-collect-garbage -d).
-        update_command = "cd ${configDir} && nix flake update nixpkgs && sudo nixos-rebuild switch --flake .#framework-13";
+        update_command = "cd ${configDir} && nix flake update nixpkgs && sudo nixos-rebuild switch --flake .#${vars.hostname}";
         panel_card_color   = "surface_variant";
         panel_card_opacity = 70;
       };
@@ -363,7 +362,7 @@ in
         # goes to runAsync, not a shell — no pipes/globs without `sh -c`. Before
         # Noctalia 5.0 these were flat `command`/`right_command`/… keys; 5.0 still
         # migrates them, but warns on every launch until the source is updated.
-        # Commands match the Mod+T / Mod+B / Mod+E binds in niri.nix.
+        # Commands match the Mod+T / Mod+B / Mod+E binds in umbriel.nix.
         # term/browser use Papirus' generic freedesktop icons rather than the
         # per-app logos, so the three buttons read as a matched set.
         term = {

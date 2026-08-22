@@ -2,7 +2,7 @@
 
 {
   imports = [
-    ./desktop/niri.nix
+    ./desktop/umbriel.nix
     ./desktop/noctalia.nix
     ./desktop/browser.nix
     ./desktop/comms.nix

@@ -7,7 +7,7 @@
 # preserved so the photo's structure survives the hue shift) and then dimmed
 # toward the theme background — a subtle, on-theme backdrop rather than a busy
 # neon photo. Built in the Nix store like any other asset, so it survives the
-# ephemeral root and keeps the niri overview backdrop filled.
+# ephemeral root and keeps the compositor overview backdrop filled.
 #
 # Colors come from the scheme, so the wallpaper tracks it. Dim is tunable:
 #   -colorize 30%       blend 30% toward base00 (higher = darker/flatter)

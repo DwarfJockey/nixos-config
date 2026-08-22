@@ -1,4 +1,10 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  vars,
+  ...
+}:
 
 let
   c = config.lib.stylix.colors.withHashtag;
@@ -22,16 +28,19 @@ in
     enable = true;
 
     settings = {
-      # Picker *label* (the .desktop Name=), not the .desktop id — verified with
-      # `noctalia-greeter sessions`, which prints "Niri". Sessions are discovered
-      # via XDG_DATA_DIRS (nixpkgs puts displayManager.sessionData.desktops first
-      # there, and greetd's PAM stack runs pam_env); the greeter's other hardcoded
-      # NixOS path, /run/current-system/sw/share/wayland-sessions, does not exist.
-      session.default = "Niri";
-      user.default = "robert";
+      # Picker *label* (the .desktop Name=), not the .desktop id — list them with
+      # `noctalia-greeter sessions`. Sessions are discovered via XDG_DATA_DIRS
+      # (nixpkgs puts displayManager.sessionData.desktops first there, and greetd's
+      # PAM stack runs pam_env); the greeter's other hardcoded NixOS path,
+      # /run/current-system/sw/share/wayland-sessions, does not exist. The entry
+      # comes from programs.umbriel (modules/nixos/desktop.nix), which registers
+      # the package in services.displayManager.sessionPackages.
+      session.default = "Umbriel";
+      user.default = vars.username;
 
       appearance = {
         scheme = "Synced"; # "Synced" = use the palette below rather than a builtin
+        hide_logo = true;
         theme_mode = "dark";
         font_family = config.stylix.fonts.sansSerif.name;
 
@@ -41,14 +50,22 @@ in
         # greeter-sync would write into sync.toml, which is what we want: sync.toml
         # is mutable runtime state and this host's root is ephemeral.
         palette = {
-          primary = c.base0D;         on_primary = c.base00;
-          secondary = c.base0E;       on_secondary = c.base00;
-          tertiary = c.base0C;        on_tertiary = c.base00;
-          error = c.base08;           on_error = c.base00;
-          surface = c.base00;         on_surface = c.base05;
-          surface_variant = c.base01; on_surface_variant = c.base04;
-          outline = c.base03;         shadow = c.base00;
-          hover = c.base0C;           on_hover = c.base00;
+          primary = c.base0D;
+          on_primary = c.base00;
+          secondary = c.base0E;
+          on_secondary = c.base00;
+          tertiary = c.base0C;
+          on_tertiary = c.base00;
+          error = c.base08;
+          on_error = c.base00;
+          surface = c.base00;
+          on_surface = c.base05;
+          surface_variant = c.base01;
+          on_surface_variant = c.base04;
+          outline = c.base03;
+          shadow = c.base00;
+          hover = c.base0C;
+          on_hover = c.base00;
         };
 
         wallpaper = {
@@ -63,7 +80,7 @@ in
         path = "${config.stylix.cursor.package}/share/icons";
       };
 
-      keyboard.layout = "us";
+      keyboard.layout = vars.keyboardLayout;
     };
   };
 }

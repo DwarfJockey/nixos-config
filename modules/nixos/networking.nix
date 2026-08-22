@@ -1,8 +1,8 @@
-{ ... }:
+{ vars, ... }:
 
 {
   networking = {
-    hostName = "framework-13";
+    hostName = vars.hostname;
     networkmanager.enable = true;
   };
 

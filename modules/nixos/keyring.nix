@@ -4,7 +4,7 @@
   # GNOME keyring (freedesktop Secret Service). Provides the secrets store that
   # libsecret clients D-Bus-activate; without it they pop an "unlock keyring"
   # dialog. Keyring data lives in ~/.local/share/keyrings, which is persisted
-  # (home/robert.nix) so it survives the ephemeral root.
+  # (home/default.nix) so it survives the ephemeral root.
   #
   # This one option is enough to auto-unlock at login. The nixpkgs module puts
   # pam_gnome_keyring into the `login` stack, and greetd's PAM service substacks

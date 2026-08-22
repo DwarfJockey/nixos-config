@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, vars, ... }:
 
 let
   claudeStatusline = pkgs.writeShellApplication {
@@ -111,8 +111,10 @@ in
     enable = true;
     # Identity comes from an agenix secret at runtime (secrets/git-identity.age,
     # registered in modules/nixos/users.nix) so name/email never live in repo
-    # source. git silently ignores the include if the path is absent.
-    includes = [ { path = "/run/agenix/git-identity"; } ];
+    # source. git silently ignores the include if the path is absent. Setting
+    # vars.git puts it in the repo instead and skips agenix — see vars.nix.
+    includes = lib.optional (vars.git == null) { path = "/run/agenix/git-identity"; };
+    settings.user = lib.mkIf (vars.git != null) vars.git;
     settings.credential."https://github.com".helper = "!gh auth git-credential";
   };
 }

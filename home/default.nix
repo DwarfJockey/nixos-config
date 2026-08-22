@@ -1,4 +1,4 @@
-{ config, lib, pkgs, inputs, ... }:
+{ config, lib, pkgs, inputs, vars, ... }:
 
 let
   colors = config.lib.stylix.colors;
@@ -14,7 +14,7 @@ let
     "#" + hex (channel "r") + hex (channel "g") + hex (channel "b");
 in
 {
-  home-manager.users.robert = {
+  home-manager.users.${vars.username} = {
 
     imports = [
       ../modules/home-manager/shell.nix
@@ -30,7 +30,6 @@ in
         "Pictures"
         "Projects"
         ".config/noctalia"
-        ".config/niri"
         ".config/zen"
         ".config/ghostty"
         ".config/nushell"
@@ -79,7 +78,7 @@ in
     # at the already-bind-mounted directory puts it inside a normal persisted dir
     # instead. settings.json resolves to `$CLAUDE_CONFIG_DIR/settings.json`, so it stays
     # exactly where it was.
-    home.sessionVariables.CLAUDE_CONFIG_DIR = "${config.users.users.robert.home}/.claude";
+    home.sessionVariables.CLAUDE_CONFIG_DIR = "${config.users.users.${vars.username}.home}/.claude";
 
     # settings.json must be a real file so /effort, /model, etc. can mutate it.
     # Activation merges declarative fields into whatever the user has saved.
@@ -119,7 +118,7 @@ in
       '';
 
     # Claude Code theme — the manual Stylix bridge for a target Stylix has no support
-    # for, same idea as Noctalia / niri / the greeter. `dark-ansi` resolves every colour
+    # for, same idea as Noctalia / Umbriel / the greeter. `dark-ansi` resolves every colour
     # it is not given through the terminal's ANSI palette, which Stylix already paints
     # from base16, so only the slots the 16 colours cannot reach are overridden here:
     # base09 (the Framework accent) and the diff *backgrounds*, which `dark-ansi` would
@@ -141,6 +140,6 @@ in
       };
     };
 
-    home.stateVersion = "25.05";
+    home.stateVersion = vars.stateVersion;
   };
 }
