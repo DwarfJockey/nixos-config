@@ -12,6 +12,21 @@ let
       hex = n: lib.fixedWidthString 2 "0" (lib.toHexString n);
     in
     "#" + hex (channel "r") + hex (channel "g") + hex (channel "b");
+
+  # Claude Code's built-in desktop notification is an OSC 9/777 escape sequence that
+  # Ghostty forwards to the daemon — stamping *its own* app icon and desktop entry, which
+  # no Claude Code setting can override, because an escape sequence carries no icon. The
+  # only way to get the Claude logo on it is to send the notification ourselves from the
+  # Notification hook. Body text comes from the hook's stdin payload.
+  claudeNotify = pkgs.writeShellApplication {
+    name = "claude-notify";
+    runtimeInputs = [ pkgs.jq pkgs.libnotify ];
+    text = ''
+      body=$(jq -r '.message // .title // empty' 2>/dev/null || true)
+      notify-send --app-name="Claude Code" --icon=${./claude-logo.png} \
+        "Claude Code" "''${body:-Claude Code needs your attention}"
+    '';
+  };
 in
 {
   home-manager.users.${vars.username} = {
@@ -90,6 +105,16 @@ in
             type = "command";
             command = "claude-statusline";
           };
+          # A Notification hook runs *alongside* the built-in notification rather than
+          # replacing it, so the built-in has to be switched off or every event fires
+          # twice. terminal_bell is the documented off-switch for the desktop
+          # notification, and it is silent here: Ghostty's default bell-features is
+          # `no-system,no-audio,attention,title`, so the bell draws no second
+          # notification and makes no sound — the window just gets an attention hint.
+          preferredNotifChannel = "terminal_bell";
+          hooks.Notification = [
+            { hooks = [ { type = "command"; command = "${claudeNotify}/bin/claude-notify"; } ]; }
+          ];
         };
       in
       inputs.home-manager.lib.hm.dag.entryAfter [ "writeBoundary" ] ''
