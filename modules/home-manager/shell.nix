@@ -22,9 +22,22 @@ let
         "$(whoami)" "$(hostname -s)" "$display_dir" "$model" "$context_part"
     '';
   };
+
+  # Dump the active base16 palette: swatch, slot name, hex. Baked in at build time
+  # from the same config.lib.stylix.colors every other bridge reads, so it cannot
+  # drift from the running theme.
+  stylixColors = pkgs.writeShellScriptBin "stylix-colors" (
+    let
+      c = config.lib.stylix.colors;
+      row = n:
+        "printf '\\e[48;2;${c."${n}-rgb-r"};${c."${n}-rgb-g"};${c."${n}-rgb-b"}m      "
+        + "\\e[0m  ${n}  ${c.withHashtag.${n}}\\n'\n";
+    in
+    lib.concatMapStrings row (map (i: "base0${i}") (lib.stringToCharacters "0123456789ABCDEF"))
+  );
 in
 {
-  home.packages = [ claudeStatusline pkgs.ripgrep pkgs.fd ];
+  home.packages = [ claudeStatusline stylixColors pkgs.ripgrep pkgs.fd ];
 
   # direnv + nix-direnv: per-project shells load automatically (nushell
   # integration is wired by the Home-Manager module).
