@@ -30,7 +30,7 @@
       base0B = "a3b565"; # green — moss
       base0C = "6fb3a8"; # cyan — muted teal
       base0D = "6e9bc4"; # blue — steel
-      base0E = "bda7f0"; # previously c4879e, meagenta — dusty rose
+      base0E = "bda7f0"; # magenta — violet
       base0F = "a5643c"; # brown — burnt sienna
     };
     polarity = "dark";

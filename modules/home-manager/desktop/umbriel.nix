@@ -140,7 +140,7 @@ in
         # an unfocused window from the wallpaper, which is how adw-gtk3 does it too.
         # Precomputed rather than #RRGGBBAA (which Umbriel would accept) so the borders
         # stay put instead of tinting with whatever wallpaper sits behind the window.
-        border_focused = over c.base09 c.base00 0.85; # #dd551e
+        border_focused = over c.base0E c.base00 0.85; # #a592d0
         border_unfocused = over c.base05 c.base00 0.15; # #363432
         scratchpad_border_focused = c.base0C;
         scratchpad_border_unfocused = c.base02;
@@ -235,10 +235,7 @@ in
           # is what the current window actually asks for.
           match.app_id = "^dev\\.noctalia\\.Noctalia$";
           default_floating = true;
-          default_size = [
-            1020
-            900
-          ];
+          default_width = 2.0 / 3.0;
         }
         {
           # The portal's screen-share picker (xdg-desktop-portal-umbriel).
