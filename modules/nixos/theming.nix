@@ -30,7 +30,7 @@
       base0B = "a3b565"; # green — moss
       base0C = "6fb3a8"; # cyan — muted teal
       base0D = "6e9bc4"; # blue — steel
-      base0E = "c4879e"; # magenta — dusty rose
+      base0E = "bda7f0"; # previously c4879e, meagenta — dusty rose
       base0F = "a5643c"; # brown — burnt sienna
     };
     polarity = "dark";
@@ -42,23 +42,39 @@
     # draws its own panel transparency. terminal/applications stay opaque (1.0).
     opacity = {
       desktop = 0.85; # bar / widgets
-      popups  = 0.90; # panels, launcher, control-center, notifications
+      popups = 0.90; # panels, launcher, control-center, notifications
     };
 
     fonts = {
-      serif     = { package = pkgs.noto-fonts;                  name = "Noto Serif"; };
-      sansSerif = { package = pkgs.adwaita-fonts;               name = "Adwaita Sans"; };
-      monospace = { package = pkgs.nerd-fonts.fira-code;        name = "FiraCode Nerd Font"; };
-      emoji     = { package = pkgs.noto-fonts-monochrome-emoji; name = "Noto Emoji"; };
+      serif = {
+        package = pkgs.noto-fonts;
+        name = "Noto Serif";
+      };
+      sansSerif = {
+        package = pkgs.adwaita-fonts;
+        name = "Adwaita Sans";
+      };
+      monospace = {
+        package = pkgs.nerd-fonts.fira-code;
+        name = "FiraCode Nerd Font";
+      };
+      emoji = {
+        package = pkgs.noto-fonts-monochrome-emoji;
+        name = "Noto Emoji";
+      };
       sizes.terminal = 11;
     };
 
-    cursor = { package = pkgs.phinger-cursors; name = "phinger-cursors-dark"; size = 24; };
-    icons  = {
-      enable  = true;
+    cursor = {
+      package = pkgs.phinger-cursors;
+      name = "phinger-cursors-dark";
+      size = 24;
+    };
+    icons = {
+      enable = true;
       package = pkgs.papirus-icon-theme;
-      dark    = "Papirus-Dark";
-      light   = "Papirus-Light";
+      dark = "Papirus-Dark";
+      light = "Papirus-Light";
     };
   };
 
