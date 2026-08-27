@@ -28,7 +28,10 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
 - **Palette:** builds a `customPalettes.Stylix` palette from the shared colour roles in
   `modules/colors.nix` — the greeter renders the same ones — renaming each key into
   Noctalia's own spelling (`on_surface_variant` → `mOnSurfaceVariant`), and selects it with
-  `theme = { source = "custom"; custom_palette = "Stylix"; mode = "dark"; }`.
+  `theme = { source = "custom"; custom_palette = "Stylix"; mode = "dark"; }`. The palette's
+  `terminal` block is a parse gate, not decoration: Noctalia rejects a whole palette mode
+  that lacks one and silently falls back to its builtin scheme, so it stays even though
+  nothing here reads terminal tokens.
 - **Opacity:** reads `config.stylix.opacity` and applies `.desktop` to both Noctalia bars
   (`bar.top`/`bar.bottom`'s `background_opacity`). `.popups` has no consumer — Umbriel
   layer rules carry blur but no opacity key, so Noctalia's own `shell.panel.transparency_mode

@@ -33,7 +33,46 @@ let
       camel = lib.toCamelCase n;
     in
     "m" + lib.toUpper (lib.substring 0 1 camel) + lib.substring 1 (-1) camel;
-  noctaliaVariant = lib.mapAttrs' (n: v: lib.nameValuePair (toShellKey n) v) (palette stylixColors);
+  # Load-bearing, despite nothing rendering the values: Noctalia's palette loader
+  # (parseCommunityPaletteJson, its src/theme/theme_service.cpp) returns nullopt for a
+  # mode object with no `terminal` object, discards the whole palette, and logs "custom
+  # palette 'Stylix' not found or invalid; falling back to builtin" — which is every
+  # colour on screen, not just terminal ones. The values themselves reach only the
+  # `terminal.*` template tokens (applyTerminalPalette writes a namespace of its own,
+  # beside the sixteen UI roles rather than into them) and this repo renders no
+  # templates, Stylix theming Ghostty directly — they follow base16's standard ANSI
+  # mapping anyway, rather than listing base00..base0F in slot order.
+  terminalPalette = with stylixColors; {
+    background = base00;
+    foreground = base05;
+    cursor = base08;
+    cursorText = base00;
+    selectionBg = base02;
+    selectionFg = base07;
+    normal = {
+      black = base00;
+      red = base08;
+      green = base0B;
+      yellow = base0A;
+      blue = base0D;
+      magenta = base0E;
+      cyan = base0C;
+      white = base05;
+    };
+    bright = {
+      black = base03;
+      red = base08;
+      green = base0B;
+      yellow = base0A;
+      blue = base0D;
+      magenta = base0E;
+      cyan = base0C;
+      white = base07;
+    };
+  };
+  noctaliaVariant =
+    { terminal = terminalPalette; }
+    // lib.mapAttrs' (n: v: lib.nameValuePair (toShellKey n) v) (palette stylixColors);
   # Single Stylix scheme (dark polarity); reuse it for both variants since mode=dark.
   noctaliaStylixPalette = {
     dark = noctaliaVariant;
