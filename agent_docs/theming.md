@@ -31,6 +31,29 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
   (`bar.main`/`bar.bottom`'s `background_opacity`). `.popups` has no consumer — Umbriel
   layer rules carry blur but no opacity key, so Noctalia's own `shell.panel.transparency_mode
   = "glass"` is what makes panels translucent.
+- **adw-gtk3 composites:** two palette slots are computed rather than mapped to a base16
+  slot, so the shell's chrome matches the GTK theme sitting next to it.
+  `mOutline = over base05 base00 0.15` (`#363432`) is adw-gtk3's `@borders`,
+  `mix(currentColor, @window_bg_color, 0.85)`; base03 (`#5e5952`) read far brighter than
+  every GTK window on screen. `mHover = over base05 base01 0.08` (`#33322f`) is its neutral
+  hover, `alpha(currentColor, 0.07-0.1)` over the card background — Noctalia's default and
+  Stylix's own target both put base0C *teal* there. `mOnHover` follows to base05, since it
+  is the label drawn on that fill. `over` comes from `modules/colors.nix`.
+  **Why a blend and not an 8-digit colour:** Noctalia's palette JSON parses alpha and then
+  masks it off (`token & 0x00FFFFFF`, its `src/theme/fixed_palette.cpp`), so a composite has
+  to be precomputed to reach it. Config-side `ColorSpec` keys *do* keep alpha through
+  `resolveColorSpec`, so `#RRGGBBAA` works there — but with `mOutline` correct, the bars
+  inherit the right hairline from the Outline role and need no per-bar `border` key.
+  `modules/nixos/greeter.nix` computes the same two values.
+- **Accent:** `mPrimary` is base09, the Framework orange (`#ff5f1f`), where Stylix's own
+  noctalia target maps base0D. The accent *role* moves; the base16 slots don't — base0D
+  stays the blue that terminals and syntax highlighting use. GTK apps keep a blue accent on
+  purpose: Stylix hardcodes base0D into `accent_color`/`accent_bg_color` in its
+  `modules/gtk/gtk.css.mustache`, so a window's own buttons and selected rows stay blue while
+  the shell chrome and the focus ring around that window read orange. To change that too,
+  `stylix.targets.gtk.extraCss` is appended after the template, so a later `@define-color`
+  wins without touching the scheme. `modules/nixos/greeter.nix` and Umbriel's
+  `accent_primary` follow the shell to base09.
 
 ## Umbriel (manual bridge, every colour)
 
@@ -40,12 +63,20 @@ Noctalia's own `assets/templates/umbriel/umbriel.toml`:
 
 - `[colors]` — the compositor's *own* surfaces (keybind cheatsheet, config-error banner):
   `background` = base00+`F0`, `text_primary` = base05, `text_muted` = base04,
-  `accent_primary` = base0D, `accent_secondary` = base0E, `warning` = base0A,
+  `accent_primary` = base09, `accent_secondary` = base0E, `warning` = base0A,
   `error` = base08.
-- `[appearance]` — `border_focused` = base0D / `border_unfocused` = base03 (reproducing what
-  `stylix.targets.niri` used to set), `outer_border_color`/`backdrop_color` = base00,
-  `insert_hint_color` = base0C+`80`, scratchpad borders base0C/base02. Geometry is a manual
-  override too: `border_width = 1` (Umbriel's default is 2) and `corner_radius = 15`.
+- `[appearance]` — the window borders are **composites**, not slots:
+  `border_focused = over base09 base00 0.85` (`#dd551e`, the accent pulled 15% toward the
+  background) and `border_unfocused = over base05 base00 0.15` (`#363432` — the same value
+  Noctalia's `mOutline` computes and GTK's `@borders` resolves to, so every hairline on
+  screen is one colour). They no longer reproduce what `stylix.targets.niri` set. The
+  unfocused edge is deliberately faint; the drop shadow is what separates the window from
+  the wallpaper, as in adw-gtk3. Precomputed rather than `#RRGGBBAA` — which Umbriel would
+  accept — so a border doesn't tint with the wallpaper behind it.
+  `outer_border_color`/`backdrop_color` = base00, `insert_hint_color` = base0C+`80`,
+  scratchpad borders base0C/base02 (the scratchpad's own signal, deliberately not the
+  accent). Geometry is a manual override too: `border_width = 1` (Umbriel's default is 2)
+  and `corner_radius = 15`.
 - `[overview]` — `background_tint` = base00+`30`, `workspace_background` = base00+`44`.
 - `[input.cursor]` — `theme`/`size` from `config.stylix.cursor`.
 

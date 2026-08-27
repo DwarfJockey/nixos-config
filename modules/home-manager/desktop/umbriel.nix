@@ -9,11 +9,11 @@
 let
   # Bridge Stylix -> Umbriel manually. Umbriel has no Stylix target (niri got one
   # from niri-flake), so every colour it draws is mapped here. Slot choices follow
-  # Noctalia's own assets/templates/umbriel/umbriel.toml, and the two border colours
-  # reproduce what stylix.targets.niri used to set (active base0D / inactive base03).
+  # Noctalia's own assets/templates/umbriel/umbriel.toml. The window borders no longer
+  # reproduce what stylix.targets.niri set (active base0D / inactive base03): they are
+  # composites now, see [appearance] below.
   c = config.lib.stylix.colors.withHashtag;
-  # Umbriel colours are #RRGGBB or #RRGGBBAA, so alpha is a two-hex-digit suffix.
-  withAlpha = slot: alpha: "${slot}${alpha}";
+  inherit (import ../../colors.nix { inherit lib; }) withAlpha over;
 
   # Mod+N switches to workspace N; Mod+Ctrl+N moves the window there. Generated over 1..9.
   workspaceBinds = lib.listToAttrs (
@@ -111,7 +111,7 @@ in
         background = withAlpha c.base00 "F0";
         text_primary = c.base05;
         text_muted = c.base04;
-        accent_primary = c.base0D;
+        accent_primary = c.base09;
         accent_secondary = c.base0E;
         warning = c.base0A;
         error = c.base08;
@@ -131,8 +131,17 @@ in
         border_width = 1;
         corner_radius = 15;
         animation_ms = 250;
-        border_focused = c.base0D;
-        border_unfocused = c.base03;
+        # Composites, not raw slots. Focused is the Framework orange pulled 15% toward
+        # the background so it reads as an accent beside the shell's own rather than
+        # louder than it. Unfocused is the identical value mOutline computes and GTK's
+        # @borders resolves to (#363432), so every hairline on screen — window edges,
+        # bar edges, panel edges, GTK window borders — is one colour. That is far
+        # dimmer than the old base03; the drop shadow below is what actually separates
+        # an unfocused window from the wallpaper, which is how adw-gtk3 does it too.
+        # Precomputed rather than #RRGGBBAA (which Umbriel would accept) so the borders
+        # stay put instead of tinting with whatever wallpaper sits behind the window.
+        border_focused = over c.base09 c.base00 0.85; # #dd551e
+        border_unfocused = over c.base05 c.base00 0.15; # #363432
         scratchpad_border_focused = c.base0C;
         scratchpad_border_unfocused = c.base02;
         outer_border_color = c.base00;
@@ -152,7 +161,7 @@ in
           softness = 8;
           offset_x = 0;
           offset_y = 3;
-          color = "#0000004D";
+          color = "#00000059";
         };
       };
 
