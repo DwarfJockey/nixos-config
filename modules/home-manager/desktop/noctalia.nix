@@ -197,9 +197,9 @@ in
           enabled = true;
           start = [ "workspaces" ];
           center = [
-            "notifications"
             "clock"
             "weather"
+            "notifications"
           ];
           end = [
             "network"
@@ -207,11 +207,10 @@ in
             "volume"
             "battery"
           ];
-          # Widgets sit in capsules for their geometry — padding and grouping — but
-          # draw no fill: capsule_opacity is 0.0, so they read flat against the bar
-          # while keeping capsule spacing. bar.bottom's capsule_group sets its own
-          # opacity = 1.0 and stays visible as a single plate, and the launcher and
-          # session widgets override back to 0.99 for their accent fills.
+          # Widgets sit in capsules for their geometry — the padding is what separates
+          # them now that widget_spacing is 0 — but draw no fill: capsule_opacity is
+          # 0.0, so they read flat against the bar. The launcher and session widgets
+          # override back to 1.0 for their accent fills.
           # capsule_radius is adw-gtk3's button radius (`button { border-radius: 9px }`)
           # rather than the 4 picked by eye in the GUI, so it agrees with the geometry
           # below. capsule_border stays unset: it was an artifact of the old flat restyle.
@@ -224,17 +223,20 @@ in
           # as a headerbar beside the GTK windows under it. thickness is its compact
           # variant (`headerbar.default-decoration { min-height: 36px }`, chosen over
           # the standard headerbar's 46px for vertical budget); padding is
-          # `headerbar { padding: 0 6px }`; widget_spacing is GtkHeaderBar's default
-          # spacing, which is Noctalia's own default too. radius (15) and border_width
+          # `headerbar { padding: 0 6px }`. radius (15) and border_width
           # (1.0) below already match `popover.background`'s radius and the headerbar's
-          # `border-width: 0 0 1px`. All four are logical pixels on both sides —
+          # `border-width: 0 0 1px`. All three are logical pixels on both sides —
           # thickness reaches layer-shell set_size unscaled — so they compare directly
           # despite the 2x panel.
           thickness = 36;
           # Stylix binding, not the 0.84999998 the GUI round-trips it to.
           background_opacity = stylixOpacity.desktop;
           padding = 6;
-          widget_spacing = 6;
+          # Widgets pack flush against each other; the capsule padding above is the
+          # only gap. Where a real one is wanted, an explicit spacer widget supplies
+          # it (see bar.bottom and widget.spacer_1 below) rather than every widget
+          # boundary getting the same 6px.
+          widget_spacing = 0;
           radius = 15;
           border_width = 1.0;
           # Bar shadow is Noctalia-drawn; Umbriel's layer rules carry blur only,
@@ -250,11 +252,15 @@ in
         bottom = {
           position = "bottom";
           enabled = true;
-          # cpu/ram/sysmon are drawn as one capsule group (`g1` below) instead of three
-          # separate widgets, so the zone references the group id rather than them.
+          # widget_spacing is 0, so a zone only has space where a spacer is placed:
+          # once between the launcher and the gauges, once before the session button.
+          # One spacer_1 instance (widget.spacer_1 below) serves both.
           start = [
             "launcher"
-            "group:g1"
+            "spacer_1"
+            "cpu"
+            "ram"
+            "sysmon"
           ];
           center = [ "media" ];
           end = [
@@ -262,40 +268,27 @@ in
             "caffeine"
             "clipboard"
             "nix-monitor"
+            "spacer_1"
             "session"
           ];
           # Same capsule treatment as bar.top; radius is adw-gtk3's button radius.
           capsule = true;
           capsule_radius = 9;
-          # Capsules keep their geometry (padding, grouping) but draw no fill: the
-          # widgets read flat against the bar, while bar.bottom's capsule_group keeps
-          # its own opacity = 1.0 and stays visible as a single plate.
+          # Capsules keep their geometry (padding) but draw no fill: the widgets read
+          # flat against the bar, apart from the launcher and session accent fills.
           capsule_opacity = 0.0;
-          # One capsule swallowing the three system gauges. `members` names what it
-          # holds; "group:g1" in a zone above is what places it.
-          capsule_group = [
-            {
-              id = "g1";
-              enabled = true;
-              members = [
-                "cpu"
-                "ram"
-                "sysmon"
-              ];
-              fill = "surface_variant";
-              padding = 6.0;
-              radius = 9.0;
-              opacity = 1.0;
-              accordion = false;
-            }
-          ];
+          # No capsule_group: cpu/ram/sysmon used to sit on one `group:g1` plate, but
+          # with widget_spacing at 0 they already abut, so the plate was drawing a
+          # surface_variant box around a run that reads as one either way. The key
+          # absent is the same as an empty array (BarConfig::widgetCapsuleGroups
+          # defaults empty), so there is nothing to switch off.
           color = "on_surface";
           font_weight = 400;
           # adw-gtk3 compact headerbar geometry, as bar.top above.
           thickness = 36;
           background_opacity = stylixOpacity.desktop;
           padding = 6;
-          widget_spacing = 6;
+          widget_spacing = 0;
           radius = 15;
           # Nearly square where the bar meets the screen edge.
           radius_bottom_left = 5;
@@ -368,6 +361,12 @@ in
       control_center = {
         sidebar = "none";
         sidebar_section = "none";
+        # The bottom bar already carries a session widget, so the panel's own session
+        # button is a second copy of it. No shortcuts are defined either, so the row
+        # and its labels are empty chrome.
+        show_session_button = false;
+        shortcuts = [ ];
+        show_shortcut_labels = false;
       };
 
       audio.enable_sounds = true;
@@ -437,7 +436,7 @@ in
         brightness.show_label = false;
         # anchor pins a *center* widget's midpoint to the bar midline so its siblings
         # growing cannot drift it sideways (src/shell/bar/bar.cpp). Off here: the three
-        # center widgets read as one group, notifications first.
+        # center widgets read as one group, clock first.
         clock = {
           anchor = false;
           format = "{:%l:%M %P}";
@@ -452,11 +451,20 @@ in
         };
         network.show_label = false;
         # cpu/ram/sysmon are glyph-only gauges; sysmon is the generic stat widget,
-        # pointed at disk usage so the three read as a set.
-        cpu.show_value = false;
-        ram.show_value = false;
+        # pointed at disk usage so the three read as a set. All three are sysmon-type
+        # widgets, so visualization applies to each: "none" drops the gauge ring
+        # (Noctalia's default) and the graph alike, leaving the bare glyph.
+        cpu = {
+          show_value = false;
+          visualization = "none";
+        };
+        ram = {
+          show_value = false;
+          visualization = "none";
+        };
         sysmon = {
           show_value = false;
+          visualization = "none";
           stat = "disk_used_pct";
         };
         # Launcher and session sit on accent-filled capsules, so they read as the two
@@ -469,16 +477,24 @@ in
           glyph = "layout-grid";
           capsule = true;
           capsule_fill = "primary";
-          capsule_opacity = 0.99;
+          capsule_opacity = 1.0;
           color = "on_primary";
         };
         session = {
           capsule = true;
           capsule_fill = "primary";
-          capsule_opacity = 0.99;
+          capsule_opacity = 1.0;
           icon_color = "on_secondary";
         };
         weather.show_condition = false;
+        # The only gap on either bar, now that widget_spacing is 0. `length` is in the
+        # same logical pixels as the bar geometry, so 6 reproduces the old uniform
+        # spacing at the two boundaries that still want it. Named instance, so it
+        # needs an explicit `type`; placed twice in bar.bottom above.
+        spacer_1 = {
+          type = "spacer";
+          length = 6;
+        };
         # Bell stays in the bar with nothing unread, so the center group keeps a
         # stable width.
         notifications.hide_when_no_unread = false;

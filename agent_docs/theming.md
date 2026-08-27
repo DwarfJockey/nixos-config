@@ -39,14 +39,16 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
 - **Bar geometry:** derived from adw-gtk3, not tuned by eye — `thickness = 36` is
   `headerbar.default-decoration { min-height: 36px }` (adw's compact headerbar, picked over
   the standard 46px for vertical budget: two bars cost 72px of a 752px logical screen rather
-  than 92px), `padding = 6` is `headerbar { padding: 0 6px }`, and `widget_spacing = 6` is
-  GtkHeaderBar's default spacing, which is also Noctalia's own default. `radius = 15` and
+  than 92px), and `padding = 6` is `headerbar { padding: 0 6px }`. `widget_spacing` is 0
+  rather than GtkHeaderBar's 6: the capsule padding is the gap, and the two places that
+  still want a wider one get an explicit `spacer` widget. `radius = 15` and
   `border_width = 1.0` already matched `popover.background`'s radius and the headerbar's
   `border-width: 0 0 1px`. Both sides are logical pixels — Noctalia's `thickness` reaches
   `zwlr_layer_surface_v1_set_size` unscaled — so they compare directly despite the 2x panel.
   `capsule_radius = 9` is adw's own button radius (`button { border-radius: 9px }`); the
   capsules carry that geometry with `capsule_opacity = 0.0`, so widgets keep the padding
-  and grouping without drawing a fill.
+  without drawing a fill — bar the launcher and session, which override to 1.0 for their
+  accent fills.
 - **adw-gtk3 composites:** three palette slots are computed rather than mapped to a base16
   slot, so the shell's chrome matches the GTK theme sitting next to it.
   `mOutline = over base05 base00 0.15` (`#363432`) is adw-gtk3's `@borders`,
