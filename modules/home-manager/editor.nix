@@ -29,9 +29,6 @@
       relativenumber = true;
       signcolumn     = "yes";
 
-      # Ghostty is truecolor.
-      termguicolors  = true;
-
       tabstop     = 2;
       shiftwidth  = 2;
       expandtab   = true;
@@ -48,10 +45,6 @@
 
       undofile = true;
 
-      autoread = true;
-
-      hlsearch   = true;
-      incsearch  = true;
       ignorecase = true;
       smartcase  = true;
     };

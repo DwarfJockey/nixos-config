@@ -89,7 +89,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixos-hardware, impermanence, disko, home-manager, zen-browser, firefox-addons, umbriel, agenix, stylix, ... }@inputs:
+  outputs = { nixpkgs, nixos-hardware, impermanence, disko, home-manager, umbriel, agenix, stylix, ... }@inputs:
   let
     # Every personal/host-specific value lives here — see ./vars.nix.
     vars = import ./vars.nix;

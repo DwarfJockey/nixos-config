@@ -10,14 +10,13 @@
     ../modules/nixos/nix.nix
     ../modules/nixos/networking.nix
     ../modules/nixos/audio.nix
-    ../modules/nixos/bluetooth.nix
     ../modules/nixos/boot-defaults.nix
     ../modules/nixos/power.nix
     ../modules/nixos/desktop.nix
     ../modules/nixos/greeter.nix
     ../modules/nixos/theming.nix
     ../modules/nixos/persistence.nix
-    ../modules/nixos/firmware.nix
+    ../modules/nixos/hardware.nix
     ../modules/nixos/fingerprint.nix
     ../modules/nixos/keyring.nix
     ../modules/nixos/apps.nix
@@ -31,7 +30,6 @@
   environment.systemPackages = with pkgs; [
     git
     curl
-    vim
     gimp
   ];
 
