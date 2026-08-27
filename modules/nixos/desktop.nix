@@ -1,6 +1,15 @@
 { pkgs, inputs, ... }:
 
 {
+  # nixpkgs-unstable gained its own programs.umbriel module (2026-08); it declares
+  # the same option as inputs.umbriel.nixosModules.default, and NixOS treats a
+  # twice-declared option as an eval error. Keep the flake's module — it ships in
+  # lockstep with the git package this repo builds and with the Home Manager module
+  # that writes the config — and drop nixpkgs' copy. Revisit if the input ever loses
+  # its NixOS module, or if tracking nixpkgs' packaged umbriel (for the binary cache)
+  # becomes worth the version lag.
+  disabledModules = [ "programs/wayland/umbriel.nix" ];
+
   # Umbriel. The module installs the package system-wide and registers it in
   # services.displayManager.sessionPackages, which is what puts `Umbriel` in the
   # greeter's session picker (plain systemPackages .desktop files aren't enough).
