@@ -3,15 +3,10 @@
 let
   colors = config.lib.stylix.colors;
 
-  # base16 has no dark diff-background slots, so blend an accent pct% over base00.
-  mix = name: pct:
-    let
-      channel = k:
-        (lib.toInt colors."${name}-rgb-${k}" * pct
-          + lib.toInt colors."base00-rgb-${k}" * (100 - pct)) / 100;
-      hex = n: lib.fixedWidthString 2 "0" (lib.toHexString n);
-    in
-    "#" + hex (channel "r") + hex (channel "g") + hex (channel "b");
+  # base16 has no dark diff-background slots, so blend an accent pct% over base00
+  # with the same sRGB lerp the Noctalia and Umbriel bridges use.
+  inherit (import ../modules/colors.nix { inherit lib; }) over;
+  mix = name: pct: over colors.withHashtag.${name} colors.withHashtag.base00 (pct / 100.0);
 
   # Claude Code's built-in desktop notification is an OSC 9/777 escape sequence that
   # Ghostty forwards to the daemon — stamping *its own* app icon and desktop entry, which
@@ -76,7 +71,6 @@ in
       file-roller
       gnome-text-editor
       claude-code
-      nodejs
       vipsdisp
       gh
       seahorse

@@ -16,78 +16,24 @@ let
   # raw stylix.image for the wallpaper (this repo wants the recolored+dimmed
   # themedWallpaper below) and doesn't bridge the bar opacity — so it's disabled
   # (see stylix.targets.noctalia.enable below) in favour of this tuned bridge.
-  # Build a Noctalia custom palette from Stylix's base16 colors; the m* mapping
-  # matches Stylix's target, and the terminal block follows base16 slot order
-  # (Stylix themes real terminals directly — this is just for Noctalia's internal
-  # palette completeness).
   stylixColors = config.lib.stylix.colors.withHashtag;
   # Window opacity owned by Stylix (set in theming.nix, propagated to HM via
   # followSystem). Bridged manually here: Stylix's noctalia target is disabled
   # (below) and only bridges dock/notification/osd opacity anyway, not the bar.
   stylixOpacity = config.stylix.opacity;
-  # Precomputes adw-gtk3's alpha-derived colours for the palette below, which parses
-  # 8-digit hex and then masks the alpha off — see the comment in modules/colors.nix.
-  inherit (import ../../colors.nix { inherit lib; }) over;
-  noctaliaVariant = with stylixColors; {
-    mSurface = base00;
-    mOnSurface = base05;
-    mSurfaceVariant = base01;
-    mOnSurfaceVariant = base04;
-    # base09, the Framework orange, rather than Stylix's noctalia target's base0D:
-    # the accent role moves, the base16 slots don't (base0D stays the terminal and
-    # syntax blue). GTK apps keep their blue accent — Stylix hardcodes base0D in its
-    # gtk.css template — so the shell and a window's own buttons differ on purpose.
-    mPrimary = base09;
-    mOnPrimary = base00;
-    mSecondary = base0E;
-    mOnSecondary = base00;
-    mTertiary = over base05 base01 0.08;
-    mOnTertiary = base05;
-    mError = base08;
-    mOnError = base00;
-    # adw-gtk3's hairline: @borders = mix(currentColor, @window_bg_color, 0.85), i.e.
-    # 15% foreground over the window background = #363432. base03 (#5e5952) reads far
-    # brighter than that against every GTK window on screen. Reaches every hairline
-    # Noctalia draws — bar edges, panel edges, buttons, control-center cards — since
-    # they all resolve the Outline role rather than a config key.
-    mOutline = over base05 base00 0.15;
-    mShadow = base00;
-    # adw-gtk3 hovers are a neutral lightening of the surface below —
-    # alpha(currentColor, 0.07-0.1) over the card/popover background — never a hue,
-    # where Noctalia's default (and Stylix's own noctalia target) puts base0C teal
-    # here. mOnHover follows to base05: it is the label drawn *on* this fill, and
-    # base00 over a dark fill would be black on black.
-    mHover = over base05 base01 0.08;
-    mOnHover = base05;
-    terminal = {
-      background = base00;
-      foreground = base05;
-      cursor = base08;
-      cursorText = base00;
-      selectionBg = base02;
-      selectionFg = base07;
-      normal = {
-        black = base00;
-        red = base01;
-        green = base02;
-        yellow = base03;
-        blue = base04;
-        magenta = base05;
-        cyan = base06;
-        white = base07;
-      };
-      bright = {
-        black = base08;
-        red = base09;
-        green = base0A;
-        yellow = base0B;
-        blue = base0C;
-        magenta = base0D;
-        cyan = base0E;
-        white = base0F;
-      };
-    };
-  };
+  # The colour roles, shared with the greeter (modules/colors.nix) — including the
+  # adw-gtk3 composites, which are precomputed there because this palette parses
+  # 8-digit hex and then masks the alpha off. Noctalia's shell spells the same roles
+  # mFoo where the greeter uses foo_bar, so the names are mapped across:
+  # `on_surface_variant` becomes `mOnSurfaceVariant`.
+  inherit (import ../../colors.nix { inherit lib; }) palette;
+  toShellKey =
+    n:
+    let
+      camel = lib.toCamelCase n;
+    in
+    "m" + lib.toUpper (lib.substring 0 1 camel) + lib.substring 1 (-1) camel;
+  noctaliaVariant = lib.mapAttrs' (n: v: lib.nameValuePair (toShellKey n) v) (palette stylixColors);
   # Single Stylix scheme (dark polarity); reuse it for both variants since mode=dark.
   noctaliaStylixPalette = {
     dark = noctaliaVariant;
@@ -302,7 +248,6 @@ in
               radius = 9.0;
               opacity = 1.0;
               accordion = false;
-              accordion_direction = "end";
             }
           ];
           color = "on_surface";
@@ -540,17 +485,11 @@ in
       # this the login box returns to its default spot on every reboot. `cx`/`cy` are
       # the box centre in the `placement_*` logical space (1440x960 = the panel's
       # 2256x1504 at scale 2), so they only mean anything alongside those two, and the
-      # instance name carries the output it was placed on. `grid` is the editor's own
-      # snapping grid, not something the lock screen draws.
+      # instance name carries the output it was placed on.
       lockscreen_widgets = {
         enabled = true;
         schema_version = 2;
         widget_order = [ "lockscreen-login-box@eDP-1" ];
-        grid = {
-          visible = true;
-          cell_size = 16;
-          major_interval = 4;
-        };
         widget."lockscreen-login-box@eDP-1" = {
           type = "login_box";
           output = "eDP-1";

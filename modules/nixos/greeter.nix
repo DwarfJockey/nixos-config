@@ -8,7 +8,7 @@
 
 let
   c = config.lib.stylix.colors.withHashtag;
-  inherit (import ../colors.nix { inherit lib; }) over;
+  inherit (import ../colors.nix { inherit lib; }) palette;
   themedWallpaper = import ../wallpaper.nix {
     inherit pkgs lib;
     colors = config.lib.stylix.colors;
@@ -45,33 +45,12 @@ in
         theme_mode = "dark";
         font_family = config.stylix.fonts.sansSerif.name;
 
-        # Same Stylix base16 -> Noctalia slot mapping as the shell bridge in
-        # modules/home-manager/desktop/noctalia.nix; the greeter uses the same key
-        # names without the `m` prefix. A complete palette here outranks anything
+        # The shared colour roles (modules/colors.nix), which the Noctalia shell
+        # renders from too — the greeter takes the key names as-is where the shell
+        # prefixes them with `m`. A complete palette here outranks anything
         # greeter-sync would write into sync.toml, which is what we want: sync.toml
         # is mutable runtime state and this host's root is ephemeral.
-        palette = {
-          # base09 (Framework orange), matching the shell bridge; GTK apps keep the
-          # blue base0D accent Stylix hardcodes.
-          primary = c.base09;
-          on_primary = c.base00;
-          secondary = c.base0E;
-          on_secondary = c.base00;
-          tertiary = c.base0C;
-          on_tertiary = c.base00;
-          error = c.base08;
-          on_error = c.base00;
-          surface = c.base00;
-          on_surface = c.base05;
-          surface_variant = c.base01;
-          on_surface_variant = c.base04;
-          # adw-gtk3's hairline and hover, precomputed — same values and same reasons
-          # as the shell bridge (modules/home-manager/desktop/noctalia.nix).
-          outline = over c.base05 c.base00 0.15;
-          shadow = c.base00;
-          hover = over c.base05 c.base01 0.08;
-          on_hover = c.base05;
-        };
+        palette = palette c;
 
         wallpaper = {
           path = "${themedWallpaper}";

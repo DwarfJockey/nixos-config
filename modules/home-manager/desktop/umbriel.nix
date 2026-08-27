@@ -13,7 +13,7 @@ let
   # reproduce what stylix.targets.niri set (active base0D / inactive base03): they are
   # composites now, see [appearance] below.
   c = config.lib.stylix.colors.withHashtag;
-  inherit (import ../../colors.nix { inherit lib; }) withAlpha over;
+  inherit (import ../../colors.nix { inherit lib; }) over;
 
   # Mod+N switches to workspace N; Mod+Ctrl+N moves the window there. Generated over 1..9.
   workspaceBinds = lib.listToAttrs (
@@ -108,7 +108,7 @@ in
 
       # Umbriel-drawn surfaces: the cheatsheet overlay and the config-error banner.
       colors = {
-        background = withAlpha c.base00 "F0";
+        background = "${c.base00}F0";
         text_primary = c.base05;
         text_muted = c.base04;
         accent_primary = c.base09;
@@ -145,7 +145,7 @@ in
         scratchpad_border_focused = c.base0C;
         scratchpad_border_unfocused = c.base02;
         outer_border_color = c.base00;
-        insert_hint_color = withAlpha c.base0C "80";
+        insert_hint_color = "${c.base0C}80";
         backdrop_color = c.base00;
 
         # Native background blur, replacing the raw-KDL `background-effect` block
@@ -161,13 +161,13 @@ in
           softness = 8;
           offset_x = 0;
           offset_y = 3;
-          color = "#00000059";
+          color = "#0000004D";
         };
       };
 
       overview = {
-        background_tint = withAlpha c.base00 "30";
-        workspace_background = withAlpha c.base00 "44";
+        background_tint = "${c.base00}30";
+        workspace_background = "${c.base00}44";
       };
 
       layout.gap = 8;
