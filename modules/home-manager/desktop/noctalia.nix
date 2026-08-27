@@ -41,8 +41,8 @@ let
     mOnPrimary = base00;
     mSecondary = base0E;
     mOnSecondary = base00;
-    mTertiary = base0C;
-    mOnTertiary = base00;
+    mTertiary = over base05 base01 0.08;
+    mOnTertiary = base05;
     mError = base08;
     mOnError = base00;
     # adw-gtk3's hairline: @borders = mix(currentColor, @window_bg_color, 0.85), i.e.
@@ -199,11 +199,15 @@ in
 
       bar = {
         order = [
-          "main"
+          "top"
           "bottom"
         ];
 
-        main = {
+        # Top-edge bar, replacing the old `main`. Laid out in the Noctalia GUI and
+        # ported back here: the GUI writes to ~/.local/state/noctalia/settings.toml,
+        # which the ephemeral root wipes on reboot (see *Noctalia settings* in
+        # CLAUDE.md), so this file is the only copy that survives.
+        top = {
           position = "top";
           enabled = true;
           start = [ "workspaces" ];
@@ -213,25 +217,39 @@ in
             "weather"
           ];
           end = [
-            "volume"
-            "bluetooth"
             "network"
+            "bluetooth"
+            "volume"
             "battery"
           ];
-          # Flat bar restyle. Neutral on_surface/outline roles (the orange mPrimary
-          # only on active states) so the bar reads like a libadwaita panel rather
-          # than a purple-tinted (secondary) one.
-          capsule = false;
+          # Widgets sit in capsules for their geometry — padding and grouping — but
+          # draw no fill: capsule_opacity is 0.0, so they read flat against the bar
+          # while keeping capsule spacing. bar.bottom's capsule_group sets its own
+          # opacity = 1.0 and stays visible as a single plate, and the launcher and
+          # session widgets override back to 0.99 for their accent fills.
+          # capsule_radius is adw-gtk3's button radius (`button { border-radius: 9px }`)
+          # rather than the 4 picked by eye in the GUI, so it agrees with the geometry
+          # below. capsule_border stays unset: it was an artifact of the old flat restyle.
+          capsule = true;
+          capsule_radius = 9;
           capsule_opacity = 0.0;
-          capsule_border = "outline";
-          # capsule_radius omitted = automatic pill radius (Noctalia only reads a
-          # number here; the GUI's "auto" is the absent key).
           color = "on_surface";
           font_weight = 400;
-          thickness = 32;
+          # Geometry taken from adw-gtk3 rather than tuned by eye, so the bar reads
+          # as a headerbar beside the GTK windows under it. thickness is its compact
+          # variant (`headerbar.default-decoration { min-height: 36px }`, chosen over
+          # the standard headerbar's 46px for vertical budget); padding is
+          # `headerbar { padding: 0 6px }`; widget_spacing is GtkHeaderBar's default
+          # spacing, which is Noctalia's own default too. radius (15) and border_width
+          # (1.0) below already match `popover.background`'s radius and the headerbar's
+          # `border-width: 0 0 1px`. All four are logical pixels on both sides —
+          # thickness reaches layer-shell set_size unscaled — so they compare directly
+          # despite the 2x panel.
+          thickness = 36;
+          # Stylix binding, not the 0.84999998 the GUI round-trips it to.
           background_opacity = stylixOpacity.desktop;
-          padding = 12;
-          widget_spacing = 12;
+          padding = 6;
+          widget_spacing = 6;
           radius = 15;
           border_width = 1.0;
           # Bar shadow is Noctalia-drawn; Umbriel's layer rules carry blur only,
@@ -247,14 +265,11 @@ in
         bottom = {
           position = "bottom";
           enabled = true;
-          # spacer_2 is a spacer instance defined under `widget` below, reused in two
-          # zones — one instance, one set of settings.
+          # cpu/ram/sysmon are drawn as one capsule group (`g1` below) instead of three
+          # separate widgets, so the zone references the group id rather than them.
           start = [
             "launcher"
-            "spacer_2"
-            "cpu"
-            "ram"
-            "sysmon"
+            "group:g1"
           ];
           center = [ "media" ];
           end = [
@@ -262,15 +277,41 @@ in
             "caffeine"
             "clipboard"
             "nix-monitor"
-            "spacer_2"
             "session"
+          ];
+          # Same capsule treatment as bar.top; radius is adw-gtk3's button radius.
+          capsule = true;
+          capsule_radius = 9;
+          # Capsules keep their geometry (padding, grouping) but draw no fill: the
+          # widgets read flat against the bar, while bar.bottom's capsule_group keeps
+          # its own opacity = 1.0 and stays visible as a single plate.
+          capsule_opacity = 0.0;
+          # One capsule swallowing the three system gauges. `members` names what it
+          # holds; "group:g1" in a zone above is what places it.
+          capsule_group = [
+            {
+              id = "g1";
+              enabled = true;
+              members = [
+                "cpu"
+                "ram"
+                "sysmon"
+              ];
+              fill = "surface_variant";
+              padding = 6.0;
+              radius = 9.0;
+              opacity = 1.0;
+              accordion = false;
+              accordion_direction = "end";
+            }
           ];
           color = "on_surface";
           font_weight = 400;
-          thickness = 32;
+          # adw-gtk3 compact headerbar geometry, as bar.top above.
+          thickness = 36;
           background_opacity = stylixOpacity.desktop;
-          padding = 12;
-          widget_spacing = 12;
+          padding = 6;
+          widget_spacing = 6;
           radius = 15;
           # Nearly square where the bar meets the screen edge.
           radius_bottom_left = 5;
@@ -295,11 +336,21 @@ in
         font_family = "Adwaita Sans";
         settings_show_advanced = true;
         app_icon_colorize = false;
+        # Chrome hairlines off across the shell's own UI. The Outline role still
+        # colours what remains (bar edges, which are drawn from bar.*.border_width,
+        # and Umbriel's window borders) — this only drops the 1px lines Noctalia
+        # would otherwise draw around its buttons, cards, inputs and popups.
+        button_borders = false;
+        card_borders = false;
+        input_borders = false;
+        popup_borders = false;
+        # Glyph-only launcher rows.
+        launcher.show_icons = false;
         # panel_anchor_bar deliberately unset: when set it *overrides* the bar a
         # panel was opened from, so top-bar widgets would drop their panels at the
         # bottom. Unset, each panel attaches to its own bar; panels with no source
         # bar (the Mod+Space / Mod+S keybinds) fall back to the first enabled bar
-        # in `bar.order`, i.e. main.
+        # in `bar.order`, i.e. top.
         panel = {
           transparency_mode = "glass";
           # placement: attached | floating (the only two values Noctalia accepts).
@@ -308,6 +359,9 @@ in
           wallpaper_placement = "floating";
           # "auto" = position the floating panel from the bar click, not screen centre.
           launcher_position = "auto";
+          # The launcher docks to its bar rather than floating; launcher_position
+          # and open_near_click_launcher below only bite while a panel floats.
+          launcher_placement = "attached";
           clipboard_position = "auto";
           polkit_position = "auto";
           open_near_click_control_center = true;
@@ -320,8 +374,10 @@ in
           # palette's mShadow (base00).
           shadow = true;
         };
-        shadow.alpha = 0.55;
+        shadow.alpha = 0.35;
       };
+      # Noctalia's desktop widget layer is unused; the bars carry everything.
+      desktop_widgets.enabled = false;
 
       dock.shadow = true;
 
@@ -419,28 +475,44 @@ in
           show_value = false;
           stat = "disk_used_pct";
         };
-        launcher.glyph = "layout-grid";
-        session.icon_color = "error";
+        # Launcher and session sit on accent-filled capsules, so they read as the two
+        # action buttons on the bottom bar. Their own capsule_opacity overrides the
+        # bar's 0.0, so these two keep a visible fill where every other widget is
+        # flat. capsule_radius is left off deliberately: the GUI writes "auto" as a
+        # *string* there and Noctalia only reads a number, so the absent key is what
+        # gives the automatic pill radius.
+        launcher = {
+          glyph = "layout-grid";
+          capsule = true;
+          capsule_fill = "primary";
+          capsule_opacity = 0.99;
+          color = "on_primary";
+        };
+        session = {
+          capsule = true;
+          capsule_fill = "primary";
+          capsule_opacity = 0.99;
+          icon_color = "on_secondary";
+        };
         weather.show_condition = false;
         # Bell stays in the bar with nothing unread, so the center group keeps a
         # stable width.
         notifications.hide_when_no_unread = false;
-        # Tray moved to the bottom bar's start zone; items sit inline, not behind a
-        # drawer button.
-        tray.drawer = false;
-        volume.show_label = false;
-        # Bare separator instance. Like the custom_button entries below, the name is
-        # arbitrary, so it needs an explicit type.
-        spacer_2 = {
-          type = "spacer";
+        # Tray items live behind a drawer button; match_adjacent_spacing keeps the
+        # drawer's gap equal to its neighbours' as it opens.
+        tray = {
+          drawer = true;
+          match_adjacent_spacing = true;
         };
+        volume.show_label = false;
         # `style` is the v5 key (the pre-v5 name was `display`); it takes
         # regular | minimal | focus_hint. minimal drops the pills and colours the
-        # label text instead. occupied_color would default to `secondary` (dusty
-        # rose) — overridden to on_surface so blue stays the bar's only accent, per
-        # the bar.main comment above. Occupancy itself comes from Noctalia's Umbriel
-        # workspace backend: ext-workspace-v1 carries only active/urgent, so on a
-        # Noctalia build without Umbriel support every tag renders as empty.
+        # label text instead. occupied_color would default to `secondary` (the lilac)
+        # — overridden to on_surface so the orange mPrimary stays the bar's only
+        # accent, per the bar.top comment above. Occupancy itself comes from
+        # Noctalia's Umbriel workspace backend: ext-workspace-v1 carries only
+        # active/urgent, so on a Noctalia build without Umbriel support every tag
+        # renders as empty.
         workspaces = {
           style = "minimal";
           occupied_color = "on_surface";

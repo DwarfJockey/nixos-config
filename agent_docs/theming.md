@@ -28,9 +28,19 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
 - **Palette:** builds a `customPalettes.Stylix` palette from `config.lib.stylix.colors`,
   selected with `theme = { source = "custom"; custom_palette = "Stylix"; mode = "dark"; }`.
 - **Opacity:** reads `config.stylix.opacity` and applies `.desktop` to both Noctalia bars
-  (`bar.main`/`bar.bottom`'s `background_opacity`). `.popups` has no consumer — Umbriel
+  (`bar.top`/`bar.bottom`'s `background_opacity`). `.popups` has no consumer — Umbriel
   layer rules carry blur but no opacity key, so Noctalia's own `shell.panel.transparency_mode
   = "glass"` is what makes panels translucent.
+- **Bar geometry:** derived from adw-gtk3, not tuned by eye — `thickness = 36` is
+  `headerbar.default-decoration { min-height: 36px }` (adw's compact headerbar, picked over
+  the standard 46px for vertical budget: two bars cost 72px of a 752px logical screen rather
+  than 92px), `padding = 6` is `headerbar { padding: 0 6px }`, and `widget_spacing = 6` is
+  GtkHeaderBar's default spacing, which is also Noctalia's own default. `radius = 15` and
+  `border_width = 1.0` already matched `popover.background`'s radius and the headerbar's
+  `border-width: 0 0 1px`. Both sides are logical pixels — Noctalia's `thickness` reaches
+  `zwlr_layer_surface_v1_set_size` unscaled — so they compare directly despite the 2x panel.
+  adw's button metrics (`border-radius: 9px`, `padding: 4px 10px`) have no counterpart set
+  here because both bars run with capsules off.
 - **adw-gtk3 composites:** two palette slots are computed rather than mapped to a base16
   slot, so the shell's chrome matches the GTK theme sitting next to it.
   `mOutline = over base05 base00 0.15` (`#363432`) is adw-gtk3's `@borders`,
@@ -93,7 +103,7 @@ the raw-KDL `background-effect` block niri needed.
   (`shell.shadow.alpha = 0.55`, `shell.panel.shadow = true`, `bar.*.shadow = true`,
   `dock.shadow = true`; color from the palette's `mShadow` = base00). Umbriel's shadow does
   not apply to layer surfaces, so this is the only shadow those surfaces get.
-- `bar.main.contact_shadow` stays false.
+- `bar.top.contact_shadow` stays false.
 
 ## Targets that keep their own theming
 
