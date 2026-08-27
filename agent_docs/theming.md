@@ -25,8 +25,10 @@ Stylix ships a `noctalia` target (`stylix.targets.noctalia`) that also writes
 the recolored+dimmed `themedWallpaper`) and doesn't bridge the bar opacity. So `desktop.nix`
 disables it (`stylix.targets.noctalia.enable = false`) and instead:
 
-- **Palette:** builds a `customPalettes.Stylix` palette from `config.lib.stylix.colors`,
-  selected with `theme = { source = "custom"; custom_palette = "Stylix"; mode = "dark"; }`.
+- **Palette:** builds a `customPalettes.Stylix` palette from the shared colour roles in
+  `modules/colors.nix` — the greeter renders the same ones — renaming each key into
+  Noctalia's own spelling (`on_surface_variant` → `mOnSurfaceVariant`), and selects it with
+  `theme = { source = "custom"; custom_palette = "Stylix"; mode = "dark"; }`.
 - **Opacity:** reads `config.stylix.opacity` and applies `.desktop` to both Noctalia bars
   (`bar.top`/`bar.bottom`'s `background_opacity`). `.popups` has no consumer — Umbriel
   layer rules carry blur but no opacity key, so Noctalia's own `shell.panel.transparency_mode
@@ -39,22 +41,24 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
   `border_width = 1.0` already matched `popover.background`'s radius and the headerbar's
   `border-width: 0 0 1px`. Both sides are logical pixels — Noctalia's `thickness` reaches
   `zwlr_layer_surface_v1_set_size` unscaled — so they compare directly despite the 2x panel.
-  adw's button metrics (`border-radius: 9px`, `padding: 4px 10px`) have no counterpart set
-  here because both bars run with capsules off.
-- **adw-gtk3 composites:** two palette slots are computed rather than mapped to a base16
+  `capsule_radius = 9` is adw's own button radius (`button { border-radius: 9px }`); the
+  capsules carry that geometry with `capsule_opacity = 0.0`, so widgets keep the padding
+  and grouping without drawing a fill.
+- **adw-gtk3 composites:** three palette slots are computed rather than mapped to a base16
   slot, so the shell's chrome matches the GTK theme sitting next to it.
   `mOutline = over base05 base00 0.15` (`#363432`) is adw-gtk3's `@borders`,
   `mix(currentColor, @window_bg_color, 0.85)`; base03 (`#5e5952`) read far brighter than
   every GTK window on screen. `mHover = over base05 base01 0.08` (`#33322f`) is its neutral
   hover, `alpha(currentColor, 0.07-0.1)` over the card background — Noctalia's default and
-  Stylix's own target both put base0C *teal* there. `mOnHover` follows to base05, since it
-  is the label drawn on that fill. `over` comes from `modules/colors.nix`.
+  Stylix's own target both put base0C *teal* there; `mTertiary` is the same neutral lift for
+  the same reason. `mOnHover` and `mOnTertiary` follow to base05, since they are the label
+  drawn on that fill. `over` and the roles themselves come from `modules/colors.nix`.
   **Why a blend and not an 8-digit colour:** Noctalia's palette JSON parses alpha and then
   masks it off (`token & 0x00FFFFFF`, its `src/theme/fixed_palette.cpp`), so a composite has
   to be precomputed to reach it. Config-side `ColorSpec` keys *do* keep alpha through
   `resolveColorSpec`, so `#RRGGBBAA` works there — but with `mOutline` correct, the bars
   inherit the right hairline from the Outline role and need no per-bar `border` key.
-  `modules/nixos/greeter.nix` computes the same two values.
+  `modules/nixos/greeter.nix` takes them from the same place.
 - **Accent:** `mPrimary` is base09, the Framework orange (`#ff5f1f`), where Stylix's own
   noctalia target maps base0D. The accent *role* moves; the base16 slots don't — base0D
   stays the blue that terminals and syntax highlighting use. GTK apps keep a blue accent on
@@ -76,8 +80,8 @@ Noctalia's own `assets/templates/umbriel/umbriel.toml`:
   `accent_primary` = base09, `accent_secondary` = base0E, `warning` = base0A,
   `error` = base08.
 - `[appearance]` — the window borders are **composites**, not slots:
-  `border_focused = over base09 base00 0.85` (`#dd551e`, the accent pulled 15% toward the
-  background) and `border_unfocused = over base05 base00 0.15` (`#363432` — the same value
+  `border_focused = over base0E base00 0.85` (`#a592d0`, the secondary accent pulled 15%
+  toward the background — the orange `mPrimary` stays the shell's alone) and `border_unfocused = over base05 base00 0.15` (`#363432` — the same value
   Noctalia's `mOutline` computes and GTK's `@borders` resolves to, so every hairline on
   screen is one colour). They no longer reproduce what `stylix.targets.niri` set. The
   unfocused edge is deliberately faint; the drop shadow is what separates the window from
@@ -100,13 +104,27 @@ the raw-KDL `background-effect` block niri needed.
   L3. niri had three presets for tiled/active/floating; Umbriel draws a single shadow for
   every window, so the L1/L5 variants are gone.
 - **Noctalia draws its own shadows for every surface it owns** — bars, dock, popups, panels
-  (`shell.shadow.alpha = 0.55`, `shell.panel.shadow = true`, `bar.*.shadow = true`,
+  (`shell.shadow.alpha = 0.35`, `shell.panel.shadow = true`, `bar.*.shadow = true`,
   `dock.shadow = true`; color from the palette's `mShadow` = base00). Umbriel's shadow does
   not apply to layer surfaces, so this is the only shadow those surfaces get.
 - `bar.top.contact_shadow` stays false.
+
+## Claude Code (manual bridge)
+
+`home/default.nix` writes `~/.claude/themes/base16.json` as a `home.file`, and the
+`home.activation.claudeSettings` hook merges `theme = "custom:base16"` into
+`~/.claude/settings.json` (a real file, not a store symlink, so `/model` and `/effort` can
+still write it).
+
+The theme is generated with `base = "dark-ansi"`, which resolves every colour it is *not*
+given through the terminal's own ANSI palette — already base16, because Stylix themes
+Ghostty. So the overrides are only the slots those 16 colours cannot reach: `claude` and
+`fastMode` = base09, `claudeShimmer` = base0A, `promptBorder` = base03, and the six diff
+colours. The diff *backgrounds* have no base16 slot at all — `dark-ansi` would draw them as
+full-brightness `ansi:green`/`ansi:red` behind base05 text — so they are blends over base00
+at 22% (row), 12% (dimmed) and 45% (word), through the same `over` the other bridges use.
 
 ## Targets that keep their own theming
 
 - **nixvim** — Stylix only targets vanilla `programs.neovim`; nixvim uses its default
   colorscheme.
-- **Claude Code** — `theme = "dark"`.

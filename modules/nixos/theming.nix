@@ -4,9 +4,12 @@
   # Stylix owns system-wide theming: a single base16 scheme drives colors, fonts,
   # cursor, and icons across every supported target (GTK, Qt, console, Ghostty,
   # nushell, starship, Zen, …). Home Manager is a NixOS module, so its Stylix
-  # targets auto-inherit this config. Non-targets are left to their own theming:
-  # Noctalia (built-in scheme), nixvim (default), Claude ("dark"), Umbriel (bridged
-  # by hand in modules/home-manager/desktop/umbriel.nix — it has no Stylix target).
+  # targets auto-inherit this config. nixvim is the one thing left to its own
+  # theming (Stylix targets vanilla programs.neovim only). Everything else Stylix
+  # can't reach is bridged by hand off this scheme: Umbriel (no target at all),
+  # Claude Code (home/default.nix), the greeter (greeter.nix), and Noctalia — which
+  # does have a target, disabled in desktop/noctalia.nix because it misses the
+  # themed wallpaper and the bar opacity. See agent_docs/theming.md.
   # Plymouth uses the firmware BGRT boot logo (boot.nix) instead of the Stylix
   # themed splash, so this target would otherwise conflict on boot.plymouth.theme.
   stylix.targets.plymouth.enable = false;
