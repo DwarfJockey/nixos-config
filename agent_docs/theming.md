@@ -96,6 +96,24 @@ Noctalia's own `assets/templates/umbriel/umbriel.toml`:
   scratchpad borders base0C/base02 (the scratchpad's own signal, deliberately not the
   accent). Geometry is a manual override too: `border_width = 1` (Umbriel's default is 2)
   and `corner_radius = 15`.
+
+  `corner_radius` does not reach Zen — every other client here rounds, Zen alone shows the
+  outline over square content. Two separate scene nodes carry a window's rounding and only
+  one of them is the client's pixels: `applyBorderRing` (`src/scene/border_rect.cpp:9`)
+  draws the outline as a `wlr_scene_rect` sized to the window geometry, so it rounds
+  whatever the client does, while `View::applyCornerRadii` (`src/view/view.cpp:888`) rounds
+  exactly one buffer — the one whose scene surface *is* the toplevel's own `wl_surface` —
+  because "subsurfaces are separate scene buffers". Gecko paints the browser into a
+  `MozContainer` `wl_subsurface`, which is skipped. Zen cannot compensate from its own side:
+  adw-gtk3 gives `decoration` a `15px 15px 0 0` radius (which is where the 15 came from),
+  but Umbriel marks every mapped window tiled on all four edges (`src/view/view.cpp:1456`,
+  `:1991`) and Gecko drops CSD rounding while tiled. `widget.gtk.rounded-bottom-corners.enabled`
+  was tried and is inert for that reason — the tiled state suppresses the rounding before
+  the pref is consulted — so it is deliberately *not* set in `desktop/browser.nix`. The
+  discriminating control, if this is ever revisited: run Zen with `MOZ_ENABLE_WAYLAND=0`,
+  which arrives through xwayland-satellite as an ordinary single-surface `xdg_toplevel`.
+  Upstream has no issue tracker to cite — Umbriel keeps GitHub issues, discussions and the
+  wiki disabled and takes reports on Discord (`discord.noctalia.dev`, README:205).
 - `[overview]` — `background_tint` = base00+`30`, `workspace_background` = base00+`44`.
 - `[input.cursor]` — `theme`/`size` from `config.stylix.cursor`.
 
