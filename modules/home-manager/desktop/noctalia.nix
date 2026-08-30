@@ -219,15 +219,17 @@ in
           capsule_opacity = 0.0;
           color = "on_surface";
           font_weight = 400;
-          # Geometry taken from adw-gtk3 rather than tuned by eye, so the bar reads
-          # as a headerbar beside the GTK windows under it. thickness is its compact
-          # variant (`headerbar.default-decoration { min-height: 36px }`, chosen over
-          # the standard headerbar's 46px for vertical budget); padding is
-          # `headerbar { padding: 0 6px }`. radius (15) and border_width
-          # (1.0) below already match `popover.background`'s radius and the headerbar's
-          # `border-width: 0 0 1px`. All three are logical pixels on both sides —
-          # thickness reaches layer-shell set_size unscaled — so they compare directly
-          # despite the 2x panel.
+          # thickness and padding come from adw-gtk3 rather than being tuned by eye,
+          # so the bar's height and inset agree with the GTK windows under it:
+          # thickness is the compact headerbar (`headerbar.default-decoration
+          # { min-height: 36px }`, chosen over the standard headerbar's 46px for
+          # vertical budget), padding is `headerbar { padding: 0 6px }`. Both are
+          # logical pixels on both sides — thickness reaches layer-shell set_size
+          # unscaled — so they compare directly despite the 2x panel. The bar does
+          # *not* borrow the headerbar's corners or its `border-width: 0 0 1px`
+          # hairline: with radius 0 below and margin_ends/margin_edge at 0 it is a
+          # full-bleed slab against the screen edge, and rounding plus an outline
+          # only read right on something that floats.
           thickness = 36;
           # Stylix binding, not the 0.84999998 the GUI round-trips it to.
           background_opacity = stylixOpacity.desktop;
@@ -237,8 +239,10 @@ in
           # it (see bar.bottom and widget.spacer_1 below) rather than every widget
           # boundary getting the same 6px.
           widget_spacing = 0;
-          radius = 15;
-          border_width = 1.0;
+          # Square corners: `radius` seeds all four (the per-corner radius_* keys
+          # exist only to override it). No border_width — Noctalia already defaults
+          # it to 0, so the hairline is off by omission.
+          radius = 0;
           # Bar shadow is Noctalia-drawn; Umbriel's layer rules carry blur only,
           # so it has no say in this either way.
           shadow = true;
@@ -266,12 +270,14 @@ in
           end = [
             "tray"
             "caffeine"
+            "nightlight"
             "clipboard"
             "nix-monitor"
             "spacer_1"
             "session"
           ];
-          # Same capsule treatment as bar.top; radius is adw-gtk3's button radius.
+          # Same capsule treatment as bar.top; capsule_radius is adw-gtk3's button
+          # radius — the only rounding left on this bar.
           capsule = true;
           capsule_radius = 9;
           # Capsules keep their geometry (padding) but draw no fill: the widgets read
@@ -289,11 +295,10 @@ in
           background_opacity = stylixOpacity.desktop;
           padding = 6;
           widget_spacing = 0;
-          radius = 15;
-          # Nearly square where the bar meets the screen edge.
-          radius_bottom_left = 5;
-          radius_bottom_right = 5;
-          border_width = 1.0;
+          # Square corners and no hairline, as bar.top. The radius_bottom_* overrides
+          # that used to round this edge are gone with it: `radius` already seeds all
+          # four corners, so 0 here is 0 everywhere.
+          radius = 0;
           margin_ends = 0;
           # Always visible: windows tile above the bar instead of under it, so
           # auto-hide (and its smart_auto_hide / show_on_workspace_switch modifiers)
@@ -314,9 +319,10 @@ in
         settings_show_advanced = true;
         app_icon_colorize = false;
         # Chrome hairlines off across the shell's own UI. The Outline role still
-        # colours what remains (bar edges, which are drawn from bar.*.border_width,
-        # and Umbriel's window borders) — this only drops the 1px lines Noctalia
-        # would otherwise draw around its buttons, cards, inputs and popups.
+        # colours Umbriel's window borders — this only drops the 1px lines Noctalia
+        # would otherwise draw around its own buttons, cards, inputs and popups.
+        # The bars draw no edge to colour either, now that both sit at the default
+        # border_width of 0.
         button_borders = false;
         card_borders = false;
         input_borders = false;
