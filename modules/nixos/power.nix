@@ -2,14 +2,18 @@
 
 let
   # PPD doesn't auto-switch on AC/battery, so drive it from the AC-adapter state:
-  # performance on mains, power-saver on battery. ACAD is the Framework's Mains
-  # power_supply node.
+  # performance on mains, power-saver on battery. The mains node is matched by its
+  # `type` attribute rather than by name: the 12th-gen board called it ACAD, but the
+  # name comes from ACPI and a stale literal here fails silently — the profile simply
+  # never switches. Every power_supply exposes `type`, and exactly one reads "Mains".
   setPowerProfile = pkgs.writeShellScript "power-profile-auto" ''
-    if [ "$(cat /sys/class/power_supply/ACAD/online 2>/dev/null)" = "1" ]; then
-      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance
-    else
-      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver
-    fi
+    for t in /sys/class/power_supply/*/type; do
+      [ "$(cat "$t" 2>/dev/null)" = "Mains" ] || continue
+      if [ "$(cat "''${t%type}online" 2>/dev/null)" = "1" ]; then
+        exec ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance
+      fi
+    done
+    exec ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver
   '';
 in
 {
@@ -38,8 +42,9 @@ in
     };
   };
 
+  # Matched on the same attribute the script reads, for the same reason.
   services.udev.extraRules = ''
-    SUBSYSTEM=="power_supply", KERNEL=="ACAD", RUN+="${pkgs.systemd}/bin/systemctl --no-block restart power-profile-auto.service"
+    SUBSYSTEM=="power_supply", ATTR{type}=="Mains", RUN+="${pkgs.systemd}/bin/systemctl --no-block restart power-profile-auto.service"
   '';
 
   # UPower's default critical-battery action is HybridSleep, which writes a full
@@ -51,11 +56,12 @@ in
   # that actually protects state without working hibernation.
   services.upower.criticalPowerAction = "PowerOff";
 
-  # Firmware memory training costs ~86s on every COLD boot (measured: the
-  # firmware phase dominates `systemd-analyze`, everything after it is <5s).
-  # It runs before NixOS loads, so no config can shorten it — but resuming from
-  # suspend (s2idle) skips training entirely. Make suspend the default
-  # off-behavior for the lid and power key so cold boots stay rare.
+  # Suspend, not poweroff, is the default off-behavior for the lid and power key.
+  # On the 12th-gen board this was a workaround as much as a preference: firmware
+  # memory training cost ~86s on every COLD boot, and resuming from s2idle skipped
+  # it entirely. That measurement was of the old DDR4 board and does not carry over
+  # to this LPCAMM2 one — re-measure with `systemd-analyze` before treating the
+  # firmware phase as a constraint again. The preference stands on its own.
   #
   # nixpkgs API note: the old discrete options (services.logind.lidSwitch /
   # powerKey / extraConfig) are renamed to services.logind.settings.Login.*.
@@ -73,9 +79,8 @@ in
   # used to fail to enumerate and retry forever, each retry an in-flight
   # usb_hub_wq hub_event that blocked the s2idle task freezer ("Freezing remaining
   # freezable tasks failed ... wq_busy=1"), aborting suspend and resuming to an
-  # unresponsive screen. That no longer reproduces: both devices now enumerate
-  # cleanly on every boot and resume, with no descriptor-read or enumerate errors
-  # in the kernel log. If unresponsive resumes come back, check
-  # `journalctl -b -k | grep -E 'unable to enumerate|Freezing.*failed'` first —
-  # the workaround is in git history.
+  # unresponsive screen. That stopped reproducing on the 12th-gen board and the
+  # port numbers were specific to it anyway. If unresponsive resumes appear here,
+  # check `journalctl -b -k | grep -E 'unable to enumerate|Freezing.*failed'`
+  # first — the workaround is in git history.
 }

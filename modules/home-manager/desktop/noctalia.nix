@@ -545,7 +545,7 @@ in
       # verbatim — the editor writes only to the non-persisted state file, so without
       # this the login box returns to its default spot on every reboot. `cx`/`cy` are
       # the box centre in the `placement_*` logical space (1440x960 = the panel's
-      # 2256x1504 at scale 2), so they only mean anything alongside those two, and the
+      # 2880x1920 at scale 2), so they only mean anything alongside those two, and the
       # instance name carries the output it was placed on.
       lockscreen_widgets = {
         enabled = true;

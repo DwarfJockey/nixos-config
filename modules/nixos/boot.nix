@@ -2,8 +2,13 @@
 
 {
   boot = {
-    # Stable kernel, not linuxPackages_latest: mainline 7.1.x regressed the
-    # Framework analog-audio (Intel DSP) driver selection, leaving only HDMI.
+    # Stable kernel, not linuxPackages_latest. This is a plain assignment on purpose:
+    # nixos-hardware's framework-intel-core-ultra-series3 sets
+    # `mkDefault pkgs.linuxPackages_latest`, but only below its 6.17 floor, which
+    # pkgs.linux already clears — so pinning here costs nothing and keeps kernel
+    # bumps deliberate. Panther Lake wants >= 6.17 for the platform and >= 6.8 for
+    # the `xe` driver (hosts/hardware-configuration.nix); if graphics or audio
+    # misbehave on new silicon, linuxPackages_latest is the first thing to try.
     kernelPackages = pkgs.linuxPackages;
     loader = {
       systemd-boot.enable = true;

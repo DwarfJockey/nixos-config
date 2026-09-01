@@ -1,5 +1,5 @@
 {
-  description = "Framework 13 NixOS configuration";
+  description = "Framework 13 Pro NixOS configuration";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -99,8 +99,9 @@
       specialArgs = { inherit inputs vars; };
       modules = [
         { nixpkgs.hostPlatform = "x86_64-linux"; }
-        # Hardware-specific: swap or drop this on anything but a 12th-gen Framework 13.
-        nixos-hardware.nixosModules.framework-12th-gen-intel
+        # Hardware-specific: swap or drop this on anything but a Framework 13 Pro
+        # (Intel Core Ultra Series 3 / Panther Lake). Note the attr has no `-13-` infix.
+        nixos-hardware.nixosModules.framework-intel-core-ultra-series3
         impermanence.nixosModules.impermanence
         disko.nixosModules.disko
         home-manager.nixosModules.home-manager

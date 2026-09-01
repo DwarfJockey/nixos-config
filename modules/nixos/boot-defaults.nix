@@ -1,13 +1,19 @@
 { pkgs, ... }:
 
 let
-  # Screen brightness -> 30% of the panel's max. intel_backlight's brightness
-  # node is root-writable sysfs, so this runs as a system service.
+  # Screen brightness -> 30% of the panel's max. The backlight node is root-writable
+  # sysfs, so this runs as a system service. It is found rather than named: the node
+  # was `intel_backlight` under i915, and the name is a property of whichever driver
+  # registered it — a wrong literal here fails *silently* (the write just never
+  # happens), so iterate over whatever /sys/class/backlight actually holds and take
+  # the first writable one. A laptop with one panel has exactly one.
   setBrightness = pkgs.writeShellScript "brightness-default" ''
-    dev=/sys/class/backlight/intel_backlight
-    [ -w "$dev/brightness" ] || exit 0
-    max=$(cat "$dev/max_brightness")
-    echo $(( max * 30 / 100 )) > "$dev/brightness"
+    for dev in /sys/class/backlight/*; do
+      [ -w "$dev/brightness" ] || continue
+      max=$(cat "$dev/max_brightness")
+      echo $(( max * 30 / 100 )) > "$dev/brightness"
+      exit 0
+    done
   '';
 
   # Keyboard backlight -> lowest lit level (20/100). Two drivers expose the same

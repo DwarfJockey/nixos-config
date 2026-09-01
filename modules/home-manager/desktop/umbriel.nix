@@ -103,7 +103,11 @@ in
         autostart = [ "zen-twilight" ] ++ lib.optional vars.apps.steam "steam -silent";
       };
 
-      # 2x scale on the Framework 13's 2256x1504 panel.
+      # 2x scale on the Framework 13 Pro's 2880x1920 13.5" panel (~253 PPI), giving
+      # 1440x960 logical — the same logical space the old 2256x1504 panel had at 2x,
+      # which is why the Noctalia lockscreen geometry carried over untouched. Umbriel
+      # takes the panel's preferred mode (2880x1920@120) on its own; `mode` and
+      # `vrr = "fullscreen"` are the knobs if that ever needs pinning down.
       output."eDP-1".scale = 2.0;
 
       # Umbriel-drawn surfaces: the cheatsheet overlay and the config-error banner.

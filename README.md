@@ -1,6 +1,6 @@
 # nixos-config
 
-NixOS flake configuration for a Framework 13 (12th-gen Intel) laptop: [Umbriel](https://github.com/noctalia-dev/umbriel) + [Noctalia](https://github.com/noctalia-dev/noctalia), themed end-to-end by [Stylix](https://github.com/nix-community/stylix), with an ephemeral root on tmpfs and persistent state under `/persist` via [impermanence](https://github.com/nix-community/impermanence). Disk layout is declarative via [disko](https://github.com/nix-community/disko).
+NixOS flake configuration for a Framework 13 Pro (Intel Core Ultra Series 3 / Panther Lake) laptop: [Umbriel](https://github.com/noctalia-dev/umbriel) + [Noctalia](https://github.com/noctalia-dev/noctalia), themed end-to-end by [Stylix](https://github.com/nix-community/stylix), with an ephemeral root on tmpfs and persistent state under `/persist` via [impermanence](https://github.com/nix-community/impermanence). Disk layout is declarative via [disko](https://github.com/nix-community/disko).
 
 Every personal value — username, hostname, timezone, disk, credentials, which apps to install — lives in **[`vars.nix`](./vars.nix)**. Nothing else needs editing to make this yours.
 
@@ -68,11 +68,11 @@ Then re-add the tmpfs root by hand — it is the one part `nixos-generate-config
   fileSystems."/" = {
     device = "none";
     fsType = "tmpfs";
-    options = [ "mode=755" "size=12G" ];   # size to taste; it is RAM
+    options = [ "mode=755" "size=6G" ];   # size to taste; it is RAM
   };
 ```
 
-If you are not on a 12th-gen Framework 13, also see [Different hardware](#different-hardware) below.
+If you are not on a Framework 13 Pro, also see [Different hardware](#different-hardware) below.
 
 ### 3. Credentials — pick one
 
@@ -126,16 +126,23 @@ After first boot, anything not declared in `home/default.nix`'s `home.persistenc
 
 ## Different hardware
 
-`vars.nix` covers identity, not silicon. On anything but a 12th-gen Framework 13, these are hand-edits:
+`vars.nix` covers identity, not silicon. On anything but a Framework 13 Pro, these are hand-edits:
 
 | what | where |
 |---|---|
-| `nixos-hardware.nixosModules.framework-12th-gen-intel` | `flake.nix` — swap for your machine's module, or drop it |
-| Display scale `output."eDP-1".scale = 2.0` | `modules/home-manager/desktop/umbriel.nix` |
-| tmpfs root size | `hosts/hardware-configuration.nix` |
-| IDT 92HD95 codec re-probe + PCI address `0000:00:1f.3` | `modules/nixos/audio.nix` — Framework-specific workaround, safe to delete |
-| Backlight devices `intel_backlight`, `framework_laptop::kbd_backlight` | `modules/nixos/boot-defaults.nix` |
-| AC power-supply node `ACAD` | `modules/nixos/power.nix` |
+| `nixos-hardware.nixosModules.framework-intel-core-ultra-series3` | `flake.nix` — swap for your machine's module, or drop it |
+| `hardware.intelgpu.driver = "xe"` — Panther Lake is xe-only; older Intel wants `i915` | `hosts/hardware-configuration.nix` |
+| tmpfs root size (`6G`, sized against 16GB of RAM) | `hosts/hardware-configuration.nix` |
+| Kernel pin `pkgs.linuxPackages` (Panther Lake needs ≥ 6.17, `xe` needs ≥ 6.8) | `modules/nixos/boot.nix` |
+| Display scale `output."eDP-1".scale = 2.0` (2880x1920 panel → 1440x960 logical) | `modules/home-manager/desktop/umbriel.nix` |
+| Lock-screen box geometry, in that same 1440x960 logical space and pinned to `eDP-1` | `modules/home-manager/desktop/noctalia.nix` |
+| Cursor size `24`, the HiDPI-doubled value that goes with scale 2 | `modules/nixos/theming.nix` |
+| `swapSize` (`32G`; hibernate is off, so this is overflow, not a RAM image) | `vars.nix` |
+
+The backlight node and the AC adapter are *not* in this table: both used to be hardcoded
+(`intel_backlight`, `ACAD`) and both now discover themselves at runtime —
+`modules/nixos/boot-defaults.nix` takes the first writable `/sys/class/backlight/*`, and
+`modules/nixos/power.nix` matches the power supply whose `type` reads `Mains`.
 
 ## Architecture reference
 

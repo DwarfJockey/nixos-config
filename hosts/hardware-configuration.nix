@@ -6,15 +6,16 @@
   ];
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "usb_storage" "uas" "sd_mod" ];
-  boot.initrd.kernelModules = [ "i915" ];
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
 
   # Root on tmpfs (ephemeral / impermanence). Disk layout (boot/swap/nix/persist) is in ./disko.nix.
+  # 6G of this machine's 16G: a ceiling rather than an allocation, but everything
+  # outside /nix and /persist lives here and tmpfs pages compete for RAM.
   fileSystems."/" = {
     device = "none";
     fsType = "tmpfs";
-    options = [ "mode=755" "size=12G" ];
+    options = [ "mode=755" "size=6G" ];
   };
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
@@ -26,11 +27,16 @@
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   hardware.enableRedistributableFirmware = true;
 
-  # Intel 12th-gen graphics: enable + VA-API/VDPAU acceleration drivers.
+  # Panther Lake (Xe3) is driven by `xe`, not `i915` — but nixos-hardware's
+  # framework-intel-core-ultra-series3 reaches the *generic* common/gpu/intel, which
+  # still defaults to i915 (there is no panther-lake GPU module upstream), so the
+  # driver is chosen here. That one option also puts the right module in
+  # boot.initrd.kernelModules (hardware.intelgpu.loadInInitrd, on by default) and
+  # fills hardware.graphics.extraPackages with intel-media-driver +
+  # intel-compute-runtime + vpl-gpu-rt — hence no hand-written package list.
   hardware.graphics.enable = true;
-  hardware.graphics.extraPackages = [
-    pkgs.intel-media-driver
-    pkgs.libva-vdpau-driver
-    pkgs.libvdpau-va-gl
-  ];
+  hardware.intelgpu = {
+    driver = "xe";
+    vaapiDriver = "intel-media-driver";
+  };
 }

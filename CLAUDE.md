@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-NixOS flake configuration for a Framework 13 laptop (12th gen Intel). Single host, single user; both names come from `vars.nix` (currently `framework-13` / `robert`). Uses an ephemeral root filesystem (tmpfs) with impermanence for persistent state under `/persist`.
+NixOS flake configuration for a Framework 13 Pro laptop (Intel Core Ultra Series 3 / Panther Lake). Single host, single user; both names come from `vars.nix` (currently `framework-13` / `robert`). Uses an ephemeral root filesystem (tmpfs) with impermanence for persistent state under `/persist`.
 
-Repo: `github.com/DwarfJockey/nixos-config`. Identity is parameterized (see *Variables* below) so the config can be re-hosted; the *hardware* is not — the `nixos-hardware` module in `flake.nix`, the audio codec workaround, the backlight device names, the AC node, and the display scale are all specific to a 12th-gen Intel Framework 13. README.md's "Different hardware" table enumerates them.
+Repo: `github.com/DwarfJockey/nixos-config`. Identity is parameterized (see *Variables* below) so the config can be re-hosted; the *hardware* is not — the `nixos-hardware` module in `flake.nix`, the `hardware.intelgpu.driver = "xe"` choice, the kernel pin, the display scale, and the lock-screen geometry derived from it are all specific to a Panther Lake Framework 13 Pro. README.md's "Different hardware" table enumerates them. The backlight node and the AC adapter used to be on that list and no longer are: both discover themselves at runtime now (see *boot-defaults* and *power* below).
 
 ## Build Commands
 
