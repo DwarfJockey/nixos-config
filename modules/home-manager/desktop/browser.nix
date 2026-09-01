@@ -36,8 +36,9 @@ in
       };
     };
     profiles."03bokykz.Default Profile" = {
-      extensions.packages = with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}; [
+      extensions.packages = with pkgs.firefox-addons; [
         ublock-origin
+        onepassword-password-manager
         dearrow
         remove-youtube-s-suggestions
       ];
