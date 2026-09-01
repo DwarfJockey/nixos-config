@@ -81,14 +81,28 @@
     };
   };
 
-  # No polkit agent unit here on purpose. niri-flake shipped one
-  # (niri-flake-polkit.service, running polkit-kde-agent), and it needed
-  # `UnsetEnvironment = "QT_STYLE_OVERRIDE"` because Stylix's qt target exports
-  # QT_STYLE_OVERRIDE=kvantum — Kvantum is a *widget* style with no QML module, and
-  # the agent fed that variable to its QML engine as a Quick Controls style, so it
-  # segfaulted before drawing any dialog and every GUI privilege prompt silently
-  # failed. Umbriel brings no agent, and Noctalia registers its own (native, not
-  # Qt), so both the unit and the workaround are gone. If a prompt ever stops
-  # appearing, check `busctl --user list | grep -i polkit` for an agent owner
-  # before assuming this needs restoring.
+  # Polkit agent. niri-flake used to ship one (niri-flake-polkit.service, running
+  # polkit-kde-agent) and it needed `UnsetEnvironment = "QT_STYLE_OVERRIDE"`
+  # because Stylix's qt target exports QT_STYLE_OVERRIDE=kvantum — Kvantum is a
+  # *widget* style with no QML module, and the agent fed that variable to its QML
+  # engine as a Quick Controls style, so it segfaulted before drawing any dialog
+  # and every GUI privilege prompt silently failed. When Umbriel replaced niri the
+  # unit was dropped on the assumption that Noctalia registers its own agent
+  # (`polkit_position` in desktop/noctalia.nix implies as much) — but in practice
+  # (checked via `journalctl --user -u noctalia.service`, zero polkit-related
+  # lines all boot, and `busctl --user list | grep -i polkit`, no agent owner)
+  # nothing ever answers an interactive polkit request: `fprintd-enroll` and
+  # `pkexec` both get an instant, promptless PermissionDenied. So the unit is
+  # back, using mate-polkit instead of polkit-kde-agent specifically because it's
+  # GTK — it never touches QT_STYLE_OVERRIDE, so the Kvantum crash can't recur.
+  systemd.user.services.polkit-agent = {
+    description = "Polkit authentication agent (mate-polkit)";
+    wantedBy = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      ExecStart = "${pkgs.mate.mate-polkit}/libexec/polkit-mate-authentication-agent-1";
+      Restart = "on-failure";
+    };
+  };
 }

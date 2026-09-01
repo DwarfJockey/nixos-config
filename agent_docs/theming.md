@@ -147,6 +147,19 @@ colours. The diff *backgrounds* have no base16 slot at all — `dark-ansi` would
 full-brightness `ansi:green`/`ansi:red` behind base05 text — so they are blends over base00
 at 22% (row), 12% (dimmed) and 45% (word), through the same `over` the other bridges use.
 
+## Polkit agent (Stylix side effect)
+
+`modules/nixos/theming.nix` runs a `systemd.user.services.polkit-agent`
+(`pkgs.mate.mate-polkit`) rather than the more common `polkit-kde-agent`. That's not a
+Noctalia-vs-KDE aesthetic call — it's forced by Stylix. `stylix.targets.qt` exports
+`QT_STYLE_OVERRIDE=kvantum` into the session; Kvantum is a *widget* style with no QML module,
+and a Qt/QML polkit agent (niri-flake's old `niri-flake-polkit.service`, running
+`polkit-kde-agent`) fed that variable to its QML engine as a Quick Controls style and
+segfaulted before drawing a dialog — every privilege prompt failed silently. mate-polkit is
+GTK, so it never reads `QT_STYLE_OVERRIDE` and the failure mode can't recur. Any future swap
+of the agent package must stay GTK-based, or explicitly `UnsetEnvironment = [
+"QT_STYLE_OVERRIDE" ]` in its unit the way niri-flake did.
+
 ## Targets that keep their own theming
 
 - **nixvim** — Stylix only targets vanilla `programs.neovim`; nixvim uses its default
