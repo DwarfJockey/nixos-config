@@ -71,6 +71,7 @@ in
       file-roller
       gnome-text-editor
       claude-code
+      nodejs # Claude Code plugin hooks shell out to `node`; the claude-code wrapper hides its own
       vipsdisp
       gh
       seahorse
