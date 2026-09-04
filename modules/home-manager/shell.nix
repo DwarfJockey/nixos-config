@@ -63,32 +63,14 @@ in
     environmentVariables =
       lib.filterAttrs (_: v: !(lib.hasInfix "$" (toString v))) config.home.sessionVariables;
 
+    # Only what differs from nushell's own defaults. The completions completer is
+    # deliberately absent: programs.carapace below sources carapace's generated
+    # nushell config, which defines the same completer and installs it into
+    # $env.config.completions.external.completer itself.
     extraConfig = ''
-     let carapace_completer = {|spans|
-     carapace $spans.0 nushell ...$spans | from json
-     }
-     $env.config = {
-      show_banner: false,
-      completions: {
-      case_sensitive: false # case-sensitive completions
-      quick: true    # set to false to prevent auto-selecting completions
-      partial: true    # set to false to prevent partial filling of the prompt
-      algorithm: "fuzzy"    # prefix or fuzzy
-      external: {
-      # set to false to prevent nushell looking into $env.PATH to find more suggestions
-          enable: true
-      # set to lower can improve completion performance at the cost of omitting some options
-          max_results: 100
-          completer: $carapace_completer # check 'carapace_completer'
-        }
-      }
-     }
-     $env.PATH = ($env.PATH |
-     split row (char esep) |
-     prepend ${config.home.homeDirectory}/.apps |
-     append /usr/bin/env
-     )
-     '';
+      $env.config.show_banner = false
+      $env.config.completions.algorithm = "fuzzy"
+    '';
     shellAliases = {
       ls = "lsd";
       ".." = "cd ..";
@@ -101,10 +83,7 @@ in
   programs.lsd.enable = true;
 
   # Carapace
-  programs.carapace = {
-    enable = true;
-    enableNushellIntegration = true;
-  };
+  programs.carapace.enable = true;
 
   # Starship
   programs.starship = {

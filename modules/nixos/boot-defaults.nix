@@ -39,21 +39,15 @@ let
   '';
 in
 {
-  systemd.services.brightness-default = {
-    description = "Set screen brightness to 30% at boot";
+  # One oneshot for both sysfs writes — same Type, same target, only ExecStart
+  # differed. The scripts stay separate because setKbdBacklight is reused by
+  # powerManagement.resumeCommands below.
+  systemd.services.hardware-defaults = {
+    description = "Set screen brightness and keyboard backlight at boot";
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = setBrightness;
-    };
-  };
-
-  systemd.services.kbd-backlight-on = {
-    description = "Set the keyboard backlight to its lowest lit level";
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = setKbdBacklight;
+      ExecStart = [ setBrightness setKbdBacklight ];
     };
   };
 

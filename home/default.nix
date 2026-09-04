@@ -116,16 +116,6 @@ in
         settings="$HOME/.claude/settings.json"
         mkdir -p "$(dirname "$settings")"
 
-        # One-time move of the pre-CLAUDE_CONFIG_DIR global config, so project trust,
-        # MCP auth and history survive the switch instead of resetting.
-        if [ -f "$HOME/.claude.json" ] && [ ! -e "$HOME/.claude/.claude.json" ]; then
-          mv "$HOME/.claude.json" "$HOME/.claude/.claude.json"
-        fi
-
-        if [ -L "$settings" ]; then
-          rm "$settings"
-        fi
-
         decl=${lib.escapeShellArg declarative}
 
         if [ -s "$settings" ]; then
