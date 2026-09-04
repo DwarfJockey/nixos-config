@@ -4,8 +4,8 @@
 # `null` means off throughout.
 {
   # Identity
-  hostname = "framework-13";
-  username = "robert";
+  hostname = "framework-13-pro";
+  username = "dwarfjockey";
 
   # Locale
   timeZone = "America/New_York";

@@ -1,6 +1,6 @@
 let
-  framework-13 = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL5jhk8Tl4rxmbqQTxSK9+Z6gLylOd9xh4elHO1vmQox framework-13";
+  framework-13-pro = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILj/1eycq5cJBHHXVzG3vm0yx3R3Ps551wg9yoETVRD6 framework-13-pro";
 in {
-  "user-password.age".publicKeys = [ framework-13 ];
-  "git-identity.age".publicKeys = [ framework-13 ];
+  "user-password.age".publicKeys = [ framework-13-pro ];
+  "git-identity.age".publicKeys = [ framework-13-pro ];
 }
