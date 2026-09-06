@@ -272,8 +272,12 @@ in
       # Umbriel loads its built-in defaults only when no config file exists — with
       # this table present, it is the complete set of binds.
       keybinds = {
-        # Core Noctalia binds
-        "Mod+Space" = "spawn:noctalia msg panel-toggle launcher";
+        # Core Noctalia binds. The launcher is on a bare Mod — upstream's own
+        # packaged bind — because Mod+Space is the scratchpad toggle below.
+        # Modifier-only binds fire on release and only when no other key press,
+        # button, scroll, touch or gesture happened while Mod was held, so every
+        # Mod+<key> chord here still works without also opening the launcher.
+        "Mod" = "spawn:noctalia msg panel-toggle launcher";
         "Mod+S" = "spawn:noctalia msg panel-toggle control-center";
         "Mod+Comma" = "spawn:noctalia msg settings-toggle";
 
@@ -304,8 +308,9 @@ in
         # Was focus-column-first / focus-column-last.
         "Mod+Home" = "layout-scroll-left";
         "Mod+End" = "layout-scroll-right";
-        # Was focus-workspace-previous.
-        "Mod+Tab" = "window-focus-next";
+        # Was focus-workspace-previous. Shifted off Mod+Tab, which is the
+        # scratchpad cycle below.
+        "Mod+Shift+Tab" = "window-focus-next";
 
         # Focus window
         "Mod+Left" = "window-focus-left";
@@ -345,6 +350,26 @@ in
         # of; these restructure the column instead.
         "Mod+Shift+U" = "window-consume-left";
         "Mod+Shift+I" = "window-expel-right";
+
+        # Scratchpad — a holding area for windows, one per output, with a single
+        # shared visibility state (there are no named scratchpads within an
+        # output). Restore returns a window to its original workspace and its
+        # tiled/floating state; toggle and focus-next do nothing while the
+        # scratchpad is hidden or empty. While a scratchpad window has focus,
+        # Mod+V, Mod+Shift+V and Mod+C are inert — restore it first.
+        # Umbriel suppresses key repeat for toggle and focus-next but not for
+        # the two membership actions, so those opt out by hand; holding the key
+        # would otherwise vacuum in, or spray back out, one window per repeat.
+        "Mod+Space" = "scratchpad-toggle";
+        "Mod+Shift+Space" = {
+          action = "window-move-to-scratchpad";
+          repeat = false;
+        };
+        "Mod+Ctrl+Space" = {
+          action = "window-restore-from-scratchpad";
+          repeat = false;
+        };
+        "Mod+Tab" = "scratchpad-focus-next";
 
         # Overview
         "Mod+Grave" = "overview-toggle";
