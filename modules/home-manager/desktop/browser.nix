@@ -68,11 +68,20 @@ in
       # Nix-managed â so it is suppressed here in CSS rather than via the picker,
       # leaving Stylix's flat base00.
       # Side effect: the picker's gradient/texture sliders now appear to do nothing.
+      #
+      # Only #zen-browser-background is hidden. #zen-toolbar-background is *not*:
+      # zen-compact-mode.css gives .zen-toolbar-background a bare `display: none`
+      # and re-enables it only inside #titlebar under :root[zen-compact-mode='true'],
+      # so it renders solely in compact mode — where it is the flyout sidebar's only
+      # backdrop (that plus --zen-big-shadow). Hiding it left the hover-revealed tab
+      # strip fully transparent over the page, and bought nothing in return: the
+      # grain rule above is a class selector that covers both instances, and Stylix's
+      # own zen target already pins --zen-main-browser-background-toolbar to base00
+      # on this element, which is the variable the gradient is painted from.
       userChrome = lib.mkAfter ''
         .zen-browser-grain { display: none !important; }
 
-        #zen-browser-background,
-        #zen-toolbar-background { display: none !important; }
+        #zen-browser-background { display: none !important; }
 
         /* GTK's popover_bg_color is base01; Stylix's zen target writes base00, so
            menus sit flush with the window where every GTK popover reads as raised.

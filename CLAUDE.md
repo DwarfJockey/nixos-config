@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-NixOS flake configuration for a Framework 13 Pro laptop (Intel Core Ultra Series 3 / Panther Lake). Single host, single user; both names come from `vars.nix` (currently `framework-13` / `robert`). Uses an ephemeral root filesystem (tmpfs) with impermanence for persistent state under `/persist`.
+NixOS flake configuration for a Framework 13 Pro laptop (Intel Core Ultra Series 3 / Panther Lake). Single host, single user; both names come from `vars.nix` (currently `framework-13-pro` / `robert`). Uses an ephemeral root filesystem (tmpfs) with impermanence for persistent state under `/persist`.
 
 Repo: `github.com/DwarfJockey/nixos-config`. Identity is parameterized (see *Variables* below) so the config can be re-hosted; the *hardware* is not — the `nixos-hardware` module in `flake.nix`, the `hardware.intelgpu.driver = "xe"` choice, the kernel pin, the display scale, and the lock-screen geometry derived from it are all specific to a Panther Lake Framework 13 Pro. README.md's "Different hardware" table enumerates them. The backlight node and the AC adapter used to be on that list and no longer are: both discover themselves at runtime now (see *boot-defaults* and *power* below).
 
@@ -12,13 +12,13 @@ Repo: `github.com/DwarfJockey/nixos-config`. Identity is parameterized (see *Var
 
 ```bash
 # Build and activate system configuration
-sudo nixos-rebuild switch --flake .#framework-13
+sudo nixos-rebuild switch --flake .#framework-13-pro
 
 # Test without making it the boot default
-sudo nixos-rebuild test --flake .#framework-13
+sudo nixos-rebuild test --flake .#framework-13-pro
 
 # Build without activating (dry check; no sudo needed)
-nixos-rebuild build --flake .#framework-13
+nixos-rebuild build --flake .#framework-13-pro
 
 # Check flake validity
 nix flake check
@@ -54,7 +54,7 @@ nix flake update <input-name>
 
 `fingerprint.nix` stays imported unconditionally even when `apps.fingerprint` is off — `nixos-hardware`'s framework module sets `services.fprintd.enable = lib.mkDefault true`, so dropping the import would leave fprintd enabled *and* lose the `login.fprintAuth = false` fix. The module sets a plain `false`, which outranks that `mkDefault`.
 
-When changing any of this, the regression test is exact: with `vars.nix` unchanged, `nixos-rebuild build --flake .#framework-13` must produce a **byte-identical store path** to the running system. Then flip `vars.nix` to a throwaway user/host in a scratch copy to exercise the `mkIf false` branches.
+When changing any of this, the regression test is exact: with `vars.nix` unchanged, `nixos-rebuild build --flake .#framework-13-pro` must produce a **byte-identical store path** to the running system. Then flip `vars.nix` to a throwaway user/host in a scratch copy to exercise the `mkIf false` branches.
 
 **Impermanence:** Everything outside `/nix` and `/persist` is wiped on reboot. System persistence is declared in `modules/nixos/persistence.nix` (`environment.persistence."/persist"`). User persistence is in `home/default.nix` (`home.persistence."/persist"`). When adding new stateful paths, they must be added to the appropriate persistence config.
 

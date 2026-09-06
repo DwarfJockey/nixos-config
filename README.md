@@ -8,10 +8,10 @@ Every personal value — username, hostname, timezone, disk, credentials, which 
 
 ```bash
 # Apply config changes
-sudo nixos-rebuild switch --flake .#framework-13
+sudo nixos-rebuild switch --flake .#framework-13-pro
 
 # Test without making it the boot default
-sudo nixos-rebuild test --flake .#framework-13
+sudo nixos-rebuild test --flake .#framework-13-pro
 
 # Update all flake inputs
 nix flake update
@@ -23,7 +23,7 @@ nix flake update <input-name>
 nix flake check
 ```
 
-Substitute your own hostname for `framework-13` once you've edited `vars.nix`.
+Substitute your own hostname for `framework-13-pro` once you've edited `vars.nix`.
 
 ## Install on your own machine
 
