@@ -11,7 +11,7 @@ let
     for dev in /sys/class/backlight/*; do
       [ -w "$dev/brightness" ] || continue
       max=$(cat "$dev/max_brightness")
-      echo $(( max * 30 / 100 )) > "$dev/brightness"
+      echo $(( max * 50 / 100 )) > "$dev/brightness"
       exit 0
     done
   '';
@@ -31,7 +31,7 @@ let
   # wpctl finds it.
   setVolume = pkgs.writeShellScript "volume-default" ''
     for _ in $(seq 1 20); do
-      if ${pkgs.wireplumber}/bin/wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.5; then
+      if ${pkgs.wireplumber}/bin/wpctl set-volume @DEFAULT_AUDIO_SINK@ 1.0; then
         exit 0
       fi
       sleep 0.5
@@ -47,7 +47,10 @@ in
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = [ setBrightness setKbdBacklight ];
+      ExecStart = [
+        setBrightness
+        setKbdBacklight
+      ];
     };
   };
 
