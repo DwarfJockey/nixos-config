@@ -143,6 +143,15 @@ in
         "browser.ai.control.smartTabGroups"     = "blocked";
         "browser.ai.control.translations"       = "blocked";
 
+        # Extensions are pinned by the firefox-addons input. Left on, Gecko's
+        # auto-update overwrote the store symlink with a newer AMO build; the next
+        # activation backed that up to .xpi.bak and restored the older pin. The
+        # downgraded 1Password then couldn't open the IndexedDB its newer self had
+        # migrated, and reopened an "unknown database error" tab on every launch.
+        # Bump extensions with `nix flake update firefox-addons` instead.
+        "extensions.update.enabled"           = false;
+        "extensions.update.autoUpdateDefault" = false;
+
         # Zen view.
         "zen.view.use-single-toolbar"        = false;
         "zen.view.compact.enable-at-startup" = false;
@@ -152,10 +161,6 @@ in
         # EnableTrackingProtection with Locked = true, so the ETP radio group
         # renders locked in the UI; this pref only records which preset is selected.
         "browser.contentblocking.category" = "custom";
-        # "Clear form data on shutdown". Inert on its own — it is gated behind
-        # privacy.sanitize.sanitizeOnShutdown, which is off, matching the live
-        # profile. Recorded for fidelity with what the panel shows.
-        "privacy.clearOnShutdown_v2.formdata" = true;
 
         # Toolbar/button layout. Gecko stores this as a JSON *string*; building it
         # from an attrset keeps it diffable instead of one escaped line. The opaque

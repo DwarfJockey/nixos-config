@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 let
-  # Screen brightness -> 30% of the panel's max. The backlight node is root-writable
+  # Screen brightness -> 50% of the panel's max. The backlight node is root-writable
   # sysfs, so this runs as a system service. It is found rather than named: the node
   # was `intel_backlight` under i915, and the name is a property of whichever driver
   # registered it — a wrong literal here fails *silently* (the write just never
@@ -26,7 +26,7 @@ let
     done
   '';
 
-  # Audio volume -> 50%. Lives in the user's PipeWire graph, so this runs as a
+  # Audio volume -> 100%. Lives in the user's PipeWire graph, so this runs as a
   # user service. The default sink can lag WirePlumber's start, so retry until
   # wpctl finds it.
   setVolume = pkgs.writeShellScript "volume-default" ''
@@ -61,7 +61,7 @@ in
   '';
 
   systemd.user.services.volume-default = {
-    description = "Set default audio volume to 50% at login";
+    description = "Set default audio volume to 100% at login";
     wantedBy = [ "default.target" ];
     after = [ "wireplumber.service" ];
     serviceConfig = {

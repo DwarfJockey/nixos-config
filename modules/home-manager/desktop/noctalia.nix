@@ -27,12 +27,7 @@ let
   # mFoo where the greeter uses foo_bar, so the names are mapped across:
   # `on_surface_variant` becomes `mOnSurfaceVariant`.
   inherit (import ../../colors.nix { inherit lib; }) palette;
-  toShellKey =
-    n:
-    let
-      camel = lib.toCamelCase n;
-    in
-    "m" + lib.toUpper (lib.substring 0 1 camel) + lib.substring 1 (-1) camel;
+  toShellKey = n: lib.toCamelCase "m_${n}";
   # Load-bearing, despite nothing rendering the values: Noctalia's palette loader
   # (parseCommunityPaletteJson, its src/theme/theme_service.cpp) returns nullopt for a
   # mode object with no `terminal` object, discards the whole palette, and logs "custom
@@ -42,7 +37,7 @@ let
   # beside the sixteen UI roles rather than into them) and this repo renders no
   # templates, Stylix theming Ghostty directly — they follow base16's standard ANSI
   # mapping anyway, rather than listing base00..base0F in slot order.
-  terminalPalette = with stylixColors; {
+  terminalPalette = with stylixColors; rec {
     background = base00;
     foreground = base05;
     cursor = base08;
@@ -59,14 +54,8 @@ let
       cyan = base0C;
       white = base05;
     };
-    bright = {
+    bright = normal // {
       black = base03;
-      red = base08;
-      green = base0B;
-      yellow = base0A;
-      blue = base0D;
-      magenta = base0E;
-      cyan = base0C;
       white = base07;
     };
   };
@@ -89,6 +78,43 @@ let
 
   # This repo's checkout, for the nix-monitor plugin's Update button.
   configDir = "${config.home.homeDirectory}/${vars.configDir}";
+
+  # Shared by bar.top and bar.bottom.
+  barBase = {
+    enabled = true;
+    # Widgets sit in capsules for their geometry — the padding is what separates
+    # them now that widget_spacing is 0 — but draw no fill: capsule_opacity is
+    # 0.0, so they read flat against the bar. The launcher and session widgets
+    # override back to 1.0 for their accent fills. capsule_radius is adw-gtk3's
+    # button radius (`button { border-radius: 9px }`).
+    capsule = true;
+    capsule_radius = 9;
+    capsule_opacity = 0.0;
+    color = "on_surface";
+    font_weight = 400;
+    # thickness and padding come from adw-gtk3 rather than being tuned by eye,
+    # so the bar's height and inset agree with the GTK windows under it:
+    # thickness is the compact headerbar (`headerbar.default-decoration
+    # { min-height: 36px }`, chosen over the standard headerbar's 46px for
+    # vertical budget), padding is `headerbar { padding: 0 6px }`. Both are
+    # logical pixels on both sides — thickness reaches layer-shell set_size
+    # unscaled — so they compare directly despite the 2x panel. The bars do
+    # *not* borrow the headerbar's corners or its hairline: full-bleed slabs
+    # against the screen edge, and rounding plus an outline only read right on
+    # something that floats.
+    thickness = 36;
+    # Stylix binding, not the 0.84999998 the GUI round-trips it to.
+    background_opacity = stylixOpacity.desktop;
+    padding = 6;
+    # Widgets pack flush against each other; the capsule padding above is the
+    # only gap. Where a real one is wanted, an explicit spacer widget supplies
+    # it (see bar.bottom and widget.spacer_1 below).
+    widget_spacing = 0;
+    # Square corners: `radius` seeds all four. No border_width — Noctalia
+    # already defaults it to 0.
+    radius = 0;
+    margin_ends = 0;
+  };
 in
 {
   imports = [
@@ -101,13 +127,12 @@ in
   stylix.targets.noctalia.enable = false;
 
   # Re-assert the themed wallpaper into the running Noctalia after a switch.
-  # config.toml (persisted) always points here, but Noctalia's live source of
-  # truth is its non-persisted runtime state; when a rebuild changes the
-  # themedWallpaper store hash, the running shell still holds the stale path and
-  # falls back to its bundled default until the next reboot re-seeds from
-  # config.toml. This closes that switch-without-reboot gap. No-op (guarded) when
-  # Noctalia isn't running yet, e.g. during early boot activation.
-  home.activation.noctaliaWallpaper = inputs.home-manager.lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # Noctalia's live source of truth is its non-persisted runtime state; when a
+  # rebuild changes the themedWallpaper store hash, the running shell still holds
+  # the stale path, and hooks.started only fires on the next Noctalia start. This
+  # closes that switch-without-reboot gap. No-op (guarded) when Noctalia isn't
+  # running yet, e.g. during early boot activation.
+  home.activation.noctaliaWallpaper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if ${noctaliaBin} msg wallpaper-get > /dev/null 2>&1; then
       ${noctaliaBin} msg wallpaper-set "${themedWallpaper}" || true
     fi
@@ -173,11 +198,10 @@ in
         };
       };
 
-      # base16-recolored, dimmed wallpaper generated in the Nix store; see
-      # themedWallpaper in the let block. Noctalia reads [wallpaper.default].path
-      # from config.toml (a declarative, persisted setting).
+      # The themed wallpaper itself is applied by hooks.started and
+      # home.activation.noctaliaWallpaper: Noctalia seeds its runtime state from its
+      # bundled default and ignores [wallpaper.default].path.
       wallpaper = {
-        default.path = "${themedWallpaper}";
         automation.enabled = false;
         transition = [ "fade" ];
       };
@@ -192,9 +216,8 @@ in
         # ported back here: the GUI writes to ~/.local/state/noctalia/settings.toml,
         # which the ephemeral root wipes on reboot (see *Noctalia settings* in
         # CLAUDE.md), so this file is the only copy that survives.
-        top = {
+        top = barBase // {
           position = "top";
-          enabled = true;
           start = [ "workspaces" ];
           center = [
             "clock"
@@ -207,55 +230,17 @@ in
             "volume"
             "battery"
           ];
-          # Widgets sit in capsules for their geometry — the padding is what separates
-          # them now that widget_spacing is 0 — but draw no fill: capsule_opacity is
-          # 0.0, so they read flat against the bar. The launcher and session widgets
-          # override back to 1.0 for their accent fills.
-          # capsule_radius is adw-gtk3's button radius (`button { border-radius: 9px }`)
-          # rather than the 4 picked by eye in the GUI, so it agrees with the geometry
-          # below. capsule_border stays unset: it was an artifact of the old flat restyle.
-          capsule = true;
-          capsule_radius = 9;
-          capsule_opacity = 0.0;
-          color = "on_surface";
-          font_weight = 400;
-          # thickness and padding come from adw-gtk3 rather than being tuned by eye,
-          # so the bar's height and inset agree with the GTK windows under it:
-          # thickness is the compact headerbar (`headerbar.default-decoration
-          # { min-height: 36px }`, chosen over the standard headerbar's 46px for
-          # vertical budget), padding is `headerbar { padding: 0 6px }`. Both are
-          # logical pixels on both sides — thickness reaches layer-shell set_size
-          # unscaled — so they compare directly despite the 2x panel. The bar does
-          # *not* borrow the headerbar's corners or its `border-width: 0 0 1px`
-          # hairline: with radius 0 below and margin_ends/margin_edge at 0 it is a
-          # full-bleed slab against the screen edge, and rounding plus an outline
-          # only read right on something that floats.
-          thickness = 36;
-          # Stylix binding, not the 0.84999998 the GUI round-trips it to.
-          background_opacity = stylixOpacity.desktop;
-          padding = 6;
-          # Widgets pack flush against each other; the capsule padding above is the
-          # only gap. Where a real one is wanted, an explicit spacer widget supplies
-          # it (see bar.bottom and widget.spacer_1 below) rather than every widget
-          # boundary getting the same 6px.
-          widget_spacing = 0;
-          # Square corners: `radius` seeds all four (the per-corner radius_* keys
-          # exist only to override it). No border_width — Noctalia already defaults
-          # it to 0, so the hairline is off by omission.
-          radius = 0;
           # Bar shadow is Noctalia-drawn; Umbriel's layer rules carry blur only,
           # so it has no say in this either way.
           shadow = true;
           contact_shadow = false;
-          margin_ends = 0;
           margin_edge = 0;
         };
 
-        # Second bar along the bottom edge. Everything not listed here stays at
-        # Noctalia's bar defaults (margins, capsule, colors, shadow).
-        bottom = {
+        # Second bar along the bottom edge. Everything not in barBase or listed here
+        # stays at Noctalia's bar defaults (margin_edge, shadow).
+        bottom = barBase // {
           position = "bottom";
-          enabled = true;
           # widget_spacing is 0, so a zone only has space where a spacer is placed:
           # once between the launcher and the gauges, once before the session button.
           # One spacer_1 instance (widget.spacer_1 below) serves both.
@@ -276,30 +261,6 @@ in
             "spacer_1"
             "session"
           ];
-          # Same capsule treatment as bar.top; capsule_radius is adw-gtk3's button
-          # radius — the only rounding left on this bar.
-          capsule = true;
-          capsule_radius = 9;
-          # Capsules keep their geometry (padding) but draw no fill: the widgets read
-          # flat against the bar, apart from the launcher and session accent fills.
-          capsule_opacity = 0.0;
-          # No capsule_group: cpu/ram/sysmon used to sit on one `group:g1` plate, but
-          # with widget_spacing at 0 they already abut, so the plate was drawing a
-          # surface_variant box around a run that reads as one either way. The key
-          # absent is the same as an empty array (BarConfig::widgetCapsuleGroups
-          # defaults empty), so there is nothing to switch off.
-          color = "on_surface";
-          font_weight = 400;
-          # adw-gtk3 compact headerbar geometry, as bar.top above.
-          thickness = 36;
-          background_opacity = stylixOpacity.desktop;
-          padding = 6;
-          widget_spacing = 0;
-          # Square corners and no hairline, as bar.top. The radius_bottom_* overrides
-          # that used to round this edge are gone with it: `radius` already seeds all
-          # four corners, so 0 here is 0 everywhere.
-          radius = 0;
-          margin_ends = 0;
           # Always visible: windows tile above the bar instead of under it, so
           # auto-hide (and its smart_auto_hide / show_on_workspace_switch modifiers)
           # is off.
@@ -315,7 +276,7 @@ in
         # every reboot — so the wizard would return on every login. This
         # persisted config.toml key short-circuits that check.
         setup_wizard_enabled = false;
-        font_family = "Adwaita Sans";
+        font_family = config.stylix.fonts.sansSerif.name;
         settings_show_advanced = true;
         app_icon_colorize = false;
         # Chrome hairlines off across the shell's own UI. The Outline role still
@@ -340,15 +301,11 @@ in
           control_center_placement = "floating";
           session_placement = "floating";
           wallpaper_placement = "floating";
-          # "auto" = position the floating panel from the bar click, not screen centre.
-          launcher_position = "auto";
-          # The launcher docks to its bar rather than floating; launcher_position
-          # and open_near_click_launcher below only bite while a panel floats.
+          # The launcher docks to its bar rather than floating.
           launcher_placement = "attached";
+          # "auto" = position the floating panel from the bar click, not screen centre.
           clipboard_position = "auto";
-          polkit_position = "auto";
           open_near_click_control_center = true;
-          open_near_click_launcher = true;
           open_near_click_clipboard = true;
           open_near_click_session = true;
           open_near_click_wallpaper = true;
@@ -439,7 +396,6 @@ in
           hide_when_full = true;
           show_label = false;
         };
-        brightness.show_label = false;
         # anchor pins a *center* widget's midpoint to the bar midline so its siblings
         # growing cannot drift it sideways (src/shell/bar/bar.cpp). Off here: the three
         # center widgets read as one group, clock first.
@@ -472,6 +428,8 @@ in
           show_value = false;
           visualization = "none";
           stat = "disk_used_pct";
+          # Default path is "/", which here is the 6G tmpfs root, not the SSD.
+          path = "/persist";
         };
         # Launcher and session sit on accent-filled capsules, so they read as the two
         # action buttons on the bottom bar. Their own capsule_opacity overrides the

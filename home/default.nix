@@ -50,8 +50,12 @@ in
         ".config/dconf"
         ".config/gtk-3.0"
         ".config/gtk-4.0"
+        ".config/PrusaSlicer" # custom MP Cadet printer profile
+        ".config/inkscape"
+        ".config/kicad"
         ".local/share/1Password"
         ".local/share/keyrings"
+        ".local/share/kicad"
         ".local/share/org.gnome.TextEditor"
         ".local/share/Steam"
         ".local/share/Bay 12 Games"
@@ -59,6 +63,7 @@ in
         ".local/share/gvfs-metadata"
         ".ssh"
         ".claude"
+        "RomVault" # exe copy + config + cache; see apps.nix
       ];
       # No `files` list: impermanence bind-mounts single files, and rename() onto a mount
       # point is EBUSY, so anything written atomically never lands. Persist directories.
@@ -75,6 +80,18 @@ in
       vipsdisp
       gh
       seahorse
+      openscad
+      prusa-slicer
+      inkscape
+      # KiCad (wxGTK) freezes on native Wayland; force XWayland.
+      (symlinkJoin {
+        name = "kicad-x11";
+        paths = [ kicad ];
+        nativeBuildInputs = [ makeWrapper ];
+        postBuild = ''
+          for f in $out/bin/*; do wrapProgram "$f" --set GDK_BACKEND x11; done
+        '';
+      })
     ];
 
     # Claude Code
@@ -118,13 +135,10 @@ in
 
         decl=${lib.escapeShellArg declarative}
 
-        if [ -s "$settings" ]; then
-          tmp=$(mktemp)
-          ${pkgs.jq}/bin/jq --argjson decl "$decl" '. * $decl' "$settings" > "$tmp"
-          mv "$tmp" "$settings"
-        else
-          printf '%s\n' "$decl" | ${pkgs.jq}/bin/jq '.' > "$settings"
-        fi
+        tmp=$(mktemp)
+        { [ -s "$settings" ] && cat "$settings" || echo '{}'; } \
+          | ${pkgs.jq}/bin/jq --argjson decl "$decl" '. * $decl' > "$tmp"
+        mv "$tmp" "$settings"
       '';
 
     # Claude Code theme — the manual Stylix bridge for a target Stylix has no support

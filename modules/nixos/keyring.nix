@@ -11,10 +11,5 @@
   # `login`, so the password typed at Noctalia Greeter reaches the keyring and
   # opens it. That only holds while the login keyring's password matches the
   # user password — the two must be changed together.
-  #
-  # Nothing extra is needed for greetd itself: its PAM service is built with
-  # `useDefaultRules = false` and contains only substack/include of `login`, so
-  # `security.pam.services.greetd.enableGnomeKeyring` emits no rules at all. It
-  # used to be set here and was always a no-op.
   services.gnome.gnome-keyring.enable = true;
 }

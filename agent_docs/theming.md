@@ -9,7 +9,7 @@ Stylix (NixOS module, configured in `modules/nixos/theming.nix`) owns system-wid
 from a single base16 scheme — an inline "Framework Anodized" palette (`base16Scheme` set
 as an attrset of `base00`..`base0F`), `polarity = "dark"` — driving colors, fonts, cursor
 (phinger-dark), icons (Papirus-Dark), and window opacity
-(`stylix.opacity.desktop`/`popups`).
+(`stylix.opacity.desktop`).
 
 With `autoEnable` on, Stylix themes every installed native target (GTK, Qt, console/TTY,
 Ghostty, nushell, starship, Zen, …). Home Manager is a NixOS module, so its Stylix targets
@@ -33,7 +33,7 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
   that lacks one and silently falls back to its builtin scheme, so it stays even though
   nothing here reads terminal tokens.
 - **Opacity:** reads `config.stylix.opacity` and applies `.desktop` to both Noctalia bars
-  (`bar.top`/`bar.bottom`'s `background_opacity`). `.popups` has no consumer — Umbriel
+  (`barBase.background_opacity`, shared by both bars). Panels need no Stylix value — Umbriel
   layer rules carry blur but no opacity key, so Noctalia's own `shell.panel.transparency_mode
   = "glass"` is what makes panels translucent.
 - **Bar geometry:** derived from adw-gtk3, not tuned by eye — `thickness = 36` is
@@ -51,9 +51,9 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
   accent fills.
 - **adw-gtk3 composites:** three palette slots are computed rather than mapped to a base16
   slot, so the shell's chrome matches the GTK theme sitting next to it.
-  `mOutline = over base05 base00 0.15` (`#363432`) is adw-gtk3's `@borders`,
-  `mix(currentColor, @window_bg_color, 0.85)`; base03 (`#5e5952`) read far brighter than
-  every GTK window on screen. `mHover = over base05 base01 0.08` (`#33322f`) is its neutral
+  `mOutline = over base05 base00 0.15` (`#1d1d1c`) is adw-gtk3's `@borders`,
+  `mix(currentColor, @window_bg_color, 0.85)`; base03 (`#5e5c64`) read far brighter than
+  every GTK window on screen. `mHover = over base05 base01 0.08` (`#302c3c`) is its neutral
   hover, `alpha(currentColor, 0.07-0.1)` over the card background — Noctalia's default and
   Stylix's own target both put base0C *teal* there; `mTertiary` is the same neutral lift for
   the same reason. `mOnHover` and `mOnTertiary` follow to base05, since they are the label
@@ -85,8 +85,8 @@ Noctalia's own `assets/templates/umbriel/umbriel.toml`:
   `accent_primary` = base09, `accent_secondary` = base0E, `warning` = base0A,
   `error` = base08.
 - `[appearance]` — the window borders are **composites**, not slots:
-  `border_focused = over base0E base00 0.85` (`#a592d0`, the secondary accent pulled 15%
-  toward the background — the orange `mPrimary` stays the shell's alone) and `border_unfocused = over base05 base00 0.15` (`#363432` — the same value
+  `border_focused = over base0E base00 0.85` (`#a18ecc`, the secondary accent pulled 15%
+  toward the background — the orange `mPrimary` stays the shell's alone) and `border_unfocused = over base05 base00 0.15` (`#1d1d1c` — the same value
   Noctalia's `mOutline` computes and GTK's `@borders` resolves to, so every hairline on
   screen is one colour). They no longer reproduce what `stylix.targets.niri` set. The
   unfocused edge is deliberately faint; the drop shadow is what separates the window from

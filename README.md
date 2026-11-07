@@ -139,10 +139,9 @@ After first boot, anything not declared in `home/default.nix`'s `home.persistenc
 | Cursor size `24`, the HiDPI-doubled value that goes with scale 2 | `modules/nixos/theming.nix` |
 | `swapSize` (`32G`; hibernate is off, so this is overflow, not a RAM image) | `vars.nix` |
 
-The backlight node and the AC adapter are *not* in this table: both used to be hardcoded
-(`intel_backlight`, `ACAD`) and both now discover themselves at runtime —
-`modules/nixos/boot-defaults.nix` takes the first writable `/sys/class/backlight/*`, and
-`modules/nixos/power.nix` matches the power supply whose `type` reads `Mains`.
+The backlight node is *not* in this table: it used to be hardcoded (`intel_backlight`) and
+now discovers itself at runtime — `modules/nixos/boot-defaults.nix` takes the first
+writable `/sys/class/backlight/*`.
 
 ## Architecture reference
 

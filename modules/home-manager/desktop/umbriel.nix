@@ -3,15 +3,15 @@
   lib,
   inputs,
   vars,
+  osConfig,
   ...
 }:
 
 let
-  # Bridge Stylix -> Umbriel manually. Umbriel has no Stylix target (niri got one
-  # from niri-flake), so every colour it draws is mapped here. Slot choices follow
-  # Noctalia's own assets/templates/umbriel/umbriel.toml. The window borders no longer
-  # reproduce what stylix.targets.niri set (active base0D / inactive base03): they are
-  # composites now, see [appearance] below.
+  # Bridge Stylix -> Umbriel manually. Umbriel has no Stylix target, so every colour
+  # it draws is mapped here. Slot choices follow Noctalia's own
+  # assets/templates/umbriel/umbriel.toml; the window borders are composites, see
+  # [appearance] below.
   c = config.lib.stylix.colors.withHashtag;
   inherit (import ../../colors.nix { inherit lib; }) over;
 
@@ -66,7 +66,14 @@ in
         Install.WantedBy = [ "graphical-session.target" ];
       };
     in
-    lib.optionalAttrs vars.apps.onePassword {
+    {
+      # Not a tray app, but it can't be an autostart either: autostart children live in
+      # umbriel.service's cgroup, so logout SIGTERMs Zen and the compositor together and
+      # Zen dies mid-shutdown with no display. As a unit ordered after
+      # graphical-session.target it is stopped first, while Wayland is up.
+      zen = trayApp "Zen Browser" "${config.programs.zen-browser.finalPackage}/bin/zen-twilight";
+    }
+    // lib.optionalAttrs vars.apps.onePassword {
       # System path, not pkgs._1password-gui: programs._1password-gui (modules/nixos/apps.nix)
       # owns setuid wrappers tied to that exact package, and a second HM closure could drift.
       "1password" = trayApp "1Password" "/run/current-system/sw/bin/1password --silent";
@@ -84,6 +91,9 @@ in
   # applies changes.
   programs.umbriel = {
     enable = true;
+    # The NixOS side's patched build (modules/nixos/desktop.nix), so there is one
+    # umbriel on PATH and validation runs against the binary that actually logs in.
+    package = osConfig.programs.umbriel.package;
 
     settings = {
       general = {
@@ -99,8 +109,9 @@ in
         # (systemd.user.services, above). Noctalia is one of those units too.
         #
         # Steam is fine here: libayatana-appindicator watches NameOwnerChanged and
-        # re-registers its tray icon whenever the watcher shows up.
-        autostart = [ "zen-twilight" ] ++ lib.optional vars.apps.steam "steam -silent";
+        # re-registers its tray icon whenever the watcher shows up. Zen is a unit too,
+        # so it shuts down before the compositor does.
+        autostart = lib.optional vars.apps.steam "steam -silent";
       };
 
       # 2x scale on the Framework 13 Pro's 2880x1920 13.5" panel (~253 PPI), giving
@@ -126,40 +137,36 @@ in
         # decorations via xdg-decoration. Umbriel then draws only the border — it
         # has no server-side titlebars — so Ghostty (window-decoration = auto,
         # which honours the negotiation) lost its GTK headerbar, and with it its
-        # tab bar. niri defaulted to false and never set it, so `false` here is
-        # what keeps decoration behaviour identical across the swap. Clients must
-        # be restarted to pick a change up.
+        # tab bar. Clients must be restarted to pick a change up.
         prefer_no_csd = false;
         # 1 logical px reads as a crisp thin accent on this 2x display (Umbriel's
-        # default is 2, niri's was 4).
+        # default is 2).
         border_width = 1;
         corner_radius = 15;
         animation_ms = 250;
-        # Composites, not raw slots. Focused is the Framework orange pulled 15% toward
-        # the background so it reads as an accent beside the shell's own rather than
-        # louder than it. Unfocused is the identical value mOutline computes and GTK's
-        # @borders resolves to (#363432), so every hairline on screen — window edges,
+        # Composites, not raw slots. Focused is the violet secondary accent (base0E)
+        # pulled 15% toward the background, so the orange mPrimary stays the shell's
+        # alone. Unfocused is the identical value mOutline computes and GTK's
+        # @borders resolves to (#1d1d1c), so every hairline on screen — window edges,
         # bar edges, panel edges, GTK window borders — is one colour. That is far
         # dimmer than the old base03; the drop shadow below is what actually separates
         # an unfocused window from the wallpaper, which is how adw-gtk3 does it too.
         # Precomputed rather than #RRGGBBAA (which Umbriel would accept) so the borders
         # stay put instead of tinting with whatever wallpaper sits behind the window.
-        border_focused = over c.base0E c.base00 0.85; # #a592d0
-        border_unfocused = over c.base05 c.base00 0.15; # #363432
+        border_focused = over c.base0E c.base00 0.85; # #a18ecc
+        border_unfocused = over c.base05 c.base00 0.15; # #1d1d1c
         scratchpad_border_focused = c.base0C;
         scratchpad_border_unfocused = c.base02;
         outer_border_color = c.base00;
         insert_hint_color = "${c.base0C}80";
         backdrop_color = c.base00;
 
-        # Native background blur, replacing the raw-KDL `background-effect` block
-        # that niri-flake's typed settings couldn't express. Master switch only —
-        # surfaces opt in through the layer_rule below.
+        # Native background blur. Master switch only — surfaces opt in through the
+        # layer_rule below.
         blur.enabled = true;
 
-        # Single global drop shadow. niri had three (Material-3 elevation L1/L3/L5
-        # for tiled/active/floating); Umbriel draws one for every window, so this is
-        # the middle preset — MD3 key-shadow alpha 0.30 with the L3 geometry.
+        # Single global drop shadow for every window: MD3 key-shadow alpha 0.30 with
+        # the elevation-L3 geometry.
         shadow = {
           enabled = true;
           softness = 8;
@@ -233,10 +240,7 @@ in
           default_width = 2.0 / 3.0;
         }
         {
-          # app_id is `dev.noctalia.Noctalia`, not `.Settings` — that was the pre-5.0
-          # name carried over from niri.nix, so this rule silently never matched and
-          # the settings window tiled. Size follows upstream's packaged example, which
-          # is what the current window actually asks for.
+          # Noctalia's settings window. Size follows upstream's packaged example.
           match.app_id = "^dev\\.noctalia\\.Noctalia$";
           default_floating = true;
           default_width = 2.0 / 3.0;
@@ -254,8 +258,7 @@ in
 
       # Layer-shell blur is off by default; Noctalia's bars/panels/OSD opt in here.
       # Regex, blur_ignore_alpha, and blur_optimized all follow upstream's packaged
-      # example. blur_optimized = false is load-bearing: it is this config's
-      # equivalent of niri's `background-effect { xray false }`. The global
+      # example. blur_optimized = false is load-bearing. The global
       # appearance.blur.optimized defaults to true, which caches one background blur
       # per output, and that cache holds the wallpaper layer and nothing above it —
       # so the bars and panels blurred the wallpaper and never the windows actually
@@ -297,19 +300,13 @@ in
         "Mod+Shift+F" = "window-toggle-fullscreen";
         "Mod+C" = "window-center";
         "Mod+V" = "window-toggle-floating";
-        # No Umbriel equivalent for niri's switch-focus-between-floating-and-tiling;
-        # pinned is the other floating-adjacent toggle it has.
         "Mod+Shift+V" = "window-toggle-pinned";
-        # Was reset-window-height, which Umbriel has no analogue for. Umbriel
-        # live-reloads on save anyway; this is the manual nudge.
+        # Umbriel live-reloads on save anyway; this is the manual nudge.
         "Mod+R" = "config-reload";
-        # Was expand-column-to-available-width.
         "Mod+Ctrl+F" = "window-toggle-maximize-to-edges";
-        # Was focus-column-first / focus-column-last.
         "Mod+Home" = "layout-scroll-left";
         "Mod+End" = "layout-scroll-right";
-        # Was focus-workspace-previous. Shifted off Mod+Tab, which is the
-        # scratchpad cycle below.
+        # Off Mod+Tab, which is the scratchpad cycle below.
         "Mod+Shift+Tab" = "window-focus-next";
 
         # Focus window
@@ -337,7 +334,7 @@ in
         "Mod+Ctrl+Shift+Down" = "column-move-to-output-down";
 
         # Column sizing. Umbriel has no window-height actions, so the Shift pair
-        # (was set-window-height +-10%) reuses the width presets instead.
+        # takes the width presets.
         "Mod+Minus" = "window-modify-width:-0.1";
         "Mod+Equal" = "window-modify-width:0.1";
         "Mod+Shift+Minus" = "window-set-width:0.5";
@@ -346,8 +343,6 @@ in
         # Workspaces
         "Mod+U" = "workspace-next";
         "Mod+I" = "workspace-previous";
-        # Was move-column-to-workspace-down/up, which Umbriel has no relative form
-        # of; these restructure the column instead.
         "Mod+Shift+U" = "window-consume-left";
         "Mod+Shift+I" = "window-expel-right";
 

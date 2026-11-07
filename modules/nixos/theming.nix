@@ -19,14 +19,14 @@
     base16Scheme = {
       scheme = "Framework Anodized";
       author = "Robert McCoy (2026)";
-      base00 = "1c1b1a"; # bg — dark keycap grey
-      base01 = "262523"; # lighter bg / line numbers
-      base02 = "35332f"; # selection
-      base03 = "5e5952"; # comments
-      base04 = "8c877f"; # status text
-      base05 = "c8c3ba"; # fg — anodized aluminum
-      base06 = "dfdbd3";
-      base07 = "f2efe9";
+      base00 = "000000"; # bg
+      base01 = "241f31"; # lighter bg / line numbers
+      base02 = "3d3846"; # selection
+      base03 = "5e5c64"; # comments
+      base04 = "9a9996"; # status text
+      base05 = "c0bfbc"; # fg
+      base06 = "deddda";
+      base07 = "ffffff";
       base08 = "e0503c"; # red — rust
       base09 = "ff5f1f"; # orange — Framework accent
       base0A = "e8a33d"; # yellow — amber
@@ -40,13 +40,9 @@
 
     # Window opacity. `.desktop` is bridged into programs.noctalia's bar
     # background_opacity (desktop/noctalia.nix), since Stylix's noctalia-shell
-    # target no-ops against this repo's programs.noctalia. `.popups` has no
-    # consumer here — Umbriel layer rules carry blur but no opacity, so Noctalia
-    # draws its own panel transparency. terminal/applications stay opaque (1.0).
-    opacity = {
-      desktop = 0.85; # bar / widgets
-      popups = 0.90; # panels, launcher, control-center, notifications
-    };
+    # target no-ops against this repo's programs.noctalia. Panels draw their own
+    # transparency; terminal/applications stay opaque (1.0).
+    opacity.desktop = 0.85; # bar / widgets
 
     fonts = {
       serif = {
@@ -81,20 +77,11 @@
     };
   };
 
-  # Polkit agent. niri-flake used to ship one (niri-flake-polkit.service, running
-  # polkit-kde-agent) and it needed `UnsetEnvironment = "QT_STYLE_OVERRIDE"`
-  # because Stylix's qt target exports QT_STYLE_OVERRIDE=kvantum — Kvantum is a
-  # *widget* style with no QML module, and the agent fed that variable to its QML
-  # engine as a Quick Controls style, so it segfaulted before drawing any dialog
-  # and every GUI privilege prompt silently failed. When Umbriel replaced niri the
-  # unit was dropped on the assumption that Noctalia registers its own agent
-  # (`polkit_position` in desktop/noctalia.nix implies as much) — but in practice
-  # (checked via `journalctl --user -u noctalia.service`, zero polkit-related
-  # lines all boot, and `busctl --user list | grep -i polkit`, no agent owner)
-  # nothing ever answers an interactive polkit request: `fprintd-enroll` and
-  # `pkexec` both get an instant, promptless PermissionDenied. So the unit is
-  # back, using mate-polkit instead of polkit-kde-agent specifically because it's
-  # GTK — it never touches QT_STYLE_OVERRIDE, so the Kvantum crash can't recur.
+  # Polkit agent. Neither Umbriel nor Noctalia registers one, so without this
+  # `fprintd-enroll`/`pkexec` get an instant, promptless PermissionDenied. GTK
+  # (mate-polkit), not a Qt/QML agent: Stylix's qt target exports
+  # QT_STYLE_OVERRIDE=kvantum, which a QML agent takes as a Quick Controls style
+  # and segfaults on.
   systemd.user.services.polkit-agent = {
     description = "Polkit authentication agent (mate-polkit)";
     wantedBy = [ "graphical-session.target" ];

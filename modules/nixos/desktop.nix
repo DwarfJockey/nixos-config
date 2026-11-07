@@ -16,6 +16,17 @@
   # The compositor's own config is Home Manager's — modules/home-manager/desktop/umbriel.nix.
   programs.umbriel.enable = true;
 
+  # xwayland-satellite forwards WM_NORMAL_HINTS min/max sizes to xdg_toplevel
+  # unchecked; mono WinForms (RomVault) sets a negative min height, the compositor
+  # answers with a protocol error, and satellite panics — killing every X client.
+  # Still unclamped upstream as of 0.8.3; drop the patch once it is fixed there.
+  programs.umbriel.package =
+    inputs.umbriel.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
+      xwayland-satellite = pkgs.xwayland-satellite.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ./xwayland-satellite-size-hints.patch ];
+      });
+    };
+
   # Two-finger press = right click. Umbriel applies only `tap` and `natural_scroll` to
   # touchpads and never calls libinput_device_config_click_set_method(), so libinput's
   # *default* click method is what the clickpad gets — button-areas everywhere except

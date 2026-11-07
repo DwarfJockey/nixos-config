@@ -38,6 +38,7 @@
     steam = true;
     discord = true;
     fingerprint = true;
+    romVault = true;
   };
 
   stateVersion = "25.05";

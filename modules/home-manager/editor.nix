@@ -153,11 +153,8 @@
         };
       };
 
-      luasnip.enable      = true;
-      cmp_luasnip.enable  = true;
-      cmp-nvim-lsp.enable = true;
-      cmp-buffer.enable   = true;
-      cmp-path.enable     = true;
+      # cmp source plugins are enabled from cmp.settings.sources (autoEnableSources).
+      luasnip.enable = true;
 
       # Fuzzy finder
       telescope = {

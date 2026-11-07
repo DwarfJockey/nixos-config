@@ -21,21 +21,13 @@
       theme = "bgrt";
     };
 
-    # Enable "Silent Boot"
+    # Enable "Silent Boot". consoleLogLevel emits loglevel=; plymouth adds splash.
     consoleLogLevel = 0;
-    initrd = {
-      systemd.enable = true;
-      verbose = false;
-    };
     kernelParams = [
       "quiet"
-      "splash"
-      "boot.shell_on_fail"
-      "loglevel=3"
       "rd.systemd.show_status=false"
       "rd.udev.log_level=3"
       "udev.log_priority=3"
-      "intel_pstate=active"
     ];
   };
 }

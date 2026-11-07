@@ -1,0 +1,22 @@
+--- a/src/xstate/mod.rs
++++ b/src/xstate/mod.rs
+@@ -991,15 +991,15 @@
+ 
+         if flags.contains(WmSizeHintsFlags::ProgramMinSize) {
+             ret.min_size = Some(WinSize {
+-                width: value[5] as _,
+-                height: value[6] as _,
++                width: (value[5] as i32).max(0),
++                height: (value[6] as i32).max(0),
+             });
+         }
+ 
+         if flags.contains(WmSizeHintsFlags::ProgramMaxSize) {
+             ret.max_size = Some(WinSize {
+-                width: value[7] as _,
+-                height: value[8] as _,
++                width: (value[7] as i32).max(0),
++                height: (value[8] as i32).max(0),
+             });
+         }
+ 
