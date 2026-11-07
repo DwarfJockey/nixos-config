@@ -1,0 +1,6 @@
+# Impermanence
+
+**Impermanence:** Everything outside `/nix` and `/persist` is wiped on reboot. `modules/system/impermanence.nix` imports the module and holds the core lists (`/etc/nixos`, `/var/log`, the SSH host keys, `~/Documents`, `~/Projects`, …); every other feature appends its own state to `environment.persistence."/persist".directories` or `home.persistence."/persist".directories` in its own file, and the lists merge. When adding a stateful app, persist its directory in the app's file.
+
+**Persist directories, never single files.** `files` entries are implemented as systemd bind mounts (`systemctl list-units --type=mount`), and `rename()` onto a mount point returns `EBUSY` — so any program that saves atomically (temp file + rename, which is what GLib's `g_file_set_contents` and Claude Code both do) fails **silently** and the persisted copy never changes. `~/.local/share/recently-used.xbel` was in the user `files` list from the initial commit and its mtime never moved off its pre-install value; it has been removed. Persist the containing directory instead, or accept the state being session-scoped. The NixOS-level `files` entries (`/etc/machine-id`, the SSH host keys) are safe only because they are written once at install and read-only afterwards.
+

@@ -27,7 +27,7 @@
 
     noctalia-plugins = {
       # Noctalia community plugins, pinned for the nix-monitor widget
-      # (modules/home-manager/desktop/noctalia.nix). Not a flake — just a tree of
+      # (modules/desktop/noctalia.nix). Not a flake — just a tree of
       # plugin directories, each with a plugin.toml.
       url = "github:noctalia-dev/community-plugins";
       flake = false;
@@ -62,7 +62,7 @@
 
     xdg-desktop-portal-umbriel = {
       # Umbriel's portal backend — ScreenCast + Screenshot. Packages only, no
-      # NixOS module; wired up in modules/nixos/desktop.nix.
+      # NixOS module; wired up in modules/desktop/umbriel.nix.
       url = "github:noctalia-dev/xdg-desktop-portal-umbriel";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -87,29 +87,20 @@
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Dendritic layout: every .nix file under ./modules is a flake-parts module,
+    # imported wholesale by `outputs` below. See agent_docs/architecture.md.
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
   };
 
-  outputs = { nixpkgs, nixos-hardware, impermanence, disko, home-manager, umbriel, agenix, stylix, ... }@inputs:
-  let
-    # Every personal/host-specific value lives here — see ./vars.nix.
-    vars = import ./vars.nix;
-  in
-  {
-    nixosConfigurations.${vars.hostname} = nixpkgs.lib.nixosSystem {
-      specialArgs = { inherit inputs vars; };
-      modules = [
-        { nixpkgs.hostPlatform = "x86_64-linux"; }
-        # Hardware-specific: swap or drop this on anything but a Framework 13 Pro
-        # (Intel Core Ultra Series 3 / Panther Lake). Note the attr has no `-13-` infix.
-        nixos-hardware.nixosModules.framework-intel-core-ultra-series3
-        impermanence.nixosModules.impermanence
-        disko.nixosModules.disko
-        home-manager.nixosModules.home-manager
-        umbriel.nixosModules.default
-        agenix.nixosModules.default
-        stylix.nixosModules.stylix
-        ./hosts
-      ];
-    };
+  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+    # Every .nix file under ./modules, minus paths containing `/_` (helpers and
+    # disabled features).
+    imports = with inputs.nixpkgs.lib;
+      filter (p: hasSuffix ".nix" (toString p) && !hasInfix "/_" (toString p))
+        (filesystem.listFilesRecursive ./modules);
   };
 }

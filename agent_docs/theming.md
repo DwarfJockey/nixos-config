@@ -5,7 +5,7 @@ misbehaving target: `stylix.targets.<name>.enable = false`.
 
 ## Stylix (the source of truth)
 
-Stylix (NixOS module, configured in `modules/nixos/theming.nix`) owns system-wide theming
+Stylix (NixOS module, configured in `modules/desktop/theming.nix`) owns system-wide theming
 from a single base16 scheme — an inline "Framework Anodized" palette (`base16Scheme` set
 as an attrset of `base00`..`base0F`), `polarity = "dark"` — driving colors, fonts, cursor
 (phinger-dark), icons (Papirus-Dark), and window opacity
@@ -13,7 +13,7 @@ as an attrset of `base00`..`base0F`), `polarity = "dark"` — driving colors, fo
 
 With `autoEnable` on, Stylix themes every installed native target (GTK, Qt, console/TTY,
 Ghostty, nushell, starship, Zen, …). Home Manager is a NixOS module, so its Stylix targets
-auto-inherit the system scheme (`desktop.nix` just sets `gtk.enable`/`qt.enable` and leaves
+auto-inherit the system scheme (the HM half of `theming.nix` just sets `gtk.enable`/`qt.enable`; `apps/ghostty.nix` leaves
 Ghostty's theme/font to Stylix).
 
 A few things have no Stylix target and are bridged manually, below.
@@ -22,11 +22,11 @@ A few things have no Stylix target and are bridged manually, below.
 
 Stylix ships a `noctalia` target (`stylix.targets.noctalia`) that also writes
 `programs.noctalia`, but it points the wallpaper at the raw `stylix.image` (this repo wants
-the recolored+dimmed `themedWallpaper`) and doesn't bridge the bar opacity. So `desktop.nix`
+the recolored+dimmed `themedWallpaper`) and doesn't bridge the bar opacity. So `desktop/noctalia.nix`
 disables it (`stylix.targets.noctalia.enable = false`) and instead:
 
 - **Palette:** builds a `customPalettes.Stylix` palette from the shared colour roles in
-  `modules/colors.nix` — the greeter renders the same ones — renaming each key into
+  `modules/_lib/colors.nix` — the greeter renders the same ones — renaming each key into
   Noctalia's own spelling (`on_surface_variant` → `mOnSurfaceVariant`), and selects it with
   `theme = { source = "custom"; custom_palette = "Stylix"; mode = "dark"; }`. The palette's
   `terminal` block is a parse gate, not decoration: Noctalia rejects a whole palette mode
@@ -57,13 +57,13 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
   hover, `alpha(currentColor, 0.07-0.1)` over the card background — Noctalia's default and
   Stylix's own target both put base0C *teal* there; `mTertiary` is the same neutral lift for
   the same reason. `mOnHover` and `mOnTertiary` follow to base05, since they are the label
-  drawn on that fill. `over` and the roles themselves come from `modules/colors.nix`.
+  drawn on that fill. `over` and the roles themselves come from `modules/_lib/colors.nix`.
   **Why a blend and not an 8-digit colour:** Noctalia's palette JSON parses alpha and then
   masks it off (`token & 0x00FFFFFF`, its `src/theme/fixed_palette.cpp`), so a composite has
   to be precomputed to reach it. Config-side `ColorSpec` keys *do* keep alpha through
   `resolveColorSpec`, so `#RRGGBBAA` works there — but with `mOutline` correct, the bars
   inherit the right hairline from the Outline role and need no per-bar `border` key.
-  `modules/nixos/greeter.nix` takes them from the same place.
+  `modules/desktop/greeter.nix` takes them from the same place.
 - **Accent:** `mPrimary` is base09, the Framework orange (`#ff5f1f`), where Stylix's own
   noctalia target maps base0D. The accent *role* moves; the base16 slots don't — base0D
   stays the blue that terminals and syntax highlighting use. GTK apps keep a blue accent on
@@ -71,13 +71,13 @@ disables it (`stylix.targets.noctalia.enable = false`) and instead:
   `modules/gtk/gtk.css.mustache`, so a window's own buttons and selected rows stay blue while
   the shell chrome and the focus ring around that window read orange. To change that too,
   `stylix.targets.gtk.extraCss` is appended after the template, so a later `@define-color`
-  wins without touching the scheme. `modules/nixos/greeter.nix` and Umbriel's
+  wins without touching the scheme. `modules/desktop/greeter.nix` and Umbriel's
   `accent_primary` follow the shell to base09.
 
 ## Umbriel (manual bridge, every colour)
 
 Umbriel has no Stylix target at all (niri got one from niri-flake), so
-`modules/home-manager/desktop/umbriel.nix` maps base16 by hand. The slot choices follow
+`modules/desktop/umbriel.nix` maps base16 by hand. The slot choices follow
 Noctalia's own `assets/templates/umbriel/umbriel.toml`:
 
 - `[colors]` — the compositor's *own* surfaces (keybind cheatsheet, config-error banner):
@@ -109,7 +109,7 @@ Noctalia's own `assets/templates/umbriel/umbriel.toml`:
   but Umbriel marks every mapped window tiled on all four edges (`src/view/view.cpp:1456`,
   `:1991`) and Gecko drops CSD rounding while tiled. `widget.gtk.rounded-bottom-corners.enabled`
   was tried and is inert for that reason — the tiled state suppresses the rounding before
-  the pref is consulted — so it is deliberately *not* set in `desktop/browser.nix`. The
+  the pref is consulted — so it is deliberately *not* set in `apps/zen.nix`. The
   discriminating control, if this is ever revisited: run Zen with `MOZ_ENABLE_WAYLAND=0`,
   which arrives through xwayland-satellite as an ordinary single-surface `xdg_toplevel`.
   Upstream has no issue tracker to cite — Umbriel keeps GitHub issues, discussions and the
@@ -134,7 +134,7 @@ the raw-KDL `background-effect` block niri needed.
 
 ## Claude Code (manual bridge)
 
-`home/default.nix` writes `~/.claude/themes/base16.json` as a `home.file`, and the
+`modules/apps/claude-code.nix` writes `~/.claude/themes/base16.json` as a `home.file`, and the
 `home.activation.claudeSettings` hook merges `theme = "custom:base16"` into
 `~/.claude/settings.json` (a real file, not a store symlink, so `/model` and `/effort` can
 still write it).
@@ -149,7 +149,7 @@ at 22% (row), 12% (dimmed) and 45% (word), through the same `over` the other bri
 
 ## Polkit agent (Stylix side effect)
 
-`modules/nixos/theming.nix` runs a `systemd.user.services.polkit-agent`
+`modules/desktop/polkit.nix` runs a `systemd.user.services.polkit-agent`
 (`pkgs.mate.mate-polkit`) rather than the more common `polkit-kde-agent`. That's not a
 Noctalia-vs-KDE aesthetic call — it's forced by Stylix. `stylix.targets.qt` exports
 `QT_STYLE_OVERRIDE=kvantum` into the session; Kvantum is a *widget* style with no QML module,
@@ -164,3 +164,5 @@ of the agent package must stay GTK-based, or explicitly `UnsetEnvironment = [
 
 - **nixvim** — Stylix only targets vanilla `programs.neovim`; nixvim uses its default
   colorscheme.
+
+`stylix-colors` (a `writeShellScriptBin` in `modules/shell/nushell.nix`, baked from the same `config.lib.stylix.colors` every bridge reads) prints the active palette — swatch, slot, hex.

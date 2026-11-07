@@ -1,0 +1,6 @@
+# Secrets
+
+**Secrets:** agenix encrypts secrets to the host's SSH host key. Edit recipients in `secrets/secrets.nix`; create/edit a secret with `nix run github:ryantm/agenix -- -e <name>.age` from inside `secrets/`. Decryption happens early at boot — `age.identityPaths` in `modules/system/users.nix` points at `/persist/etc/ssh/ssh_host_ed25519_key`. Git's `user.name`/`user.email` are **not** in `shell/git.nix`; they come from the `git-identity` secret, decrypted to `/run/agenix/git-identity` and pulled in via `programs.git.includes`.
+
+Because those `.age` files are encrypted to *this* host's key, a fresh install on other hardware cannot decrypt them — and an undecryptable `hashedPasswordFile` means no login on first boot. Hence the escape hatch: setting `vars.hashedPassword` (a `mkpasswd -m sha-512` hash) drops `age.secrets.user-password` and uses `users.users.<name>.hashedPassword` instead; setting `vars.git` drops `age.secrets.git-identity` and writes `programs.git.settings.user` directly. With both non-null, `age.secrets` evaluates to `{}` and `secrets/` is never read. `hashedPassword`, not `initialHashedPassword` — `mutableUsers = false` makes the former authoritative. README.md documents both paths.
+

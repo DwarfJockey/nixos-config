@@ -1,97 +1,51 @@
-# CLAUDE.md
+# nixos-config
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+NixOS flake for one Framework 13 Pro (Panther Lake) laptop: Umbriel compositor + Noctalia shell,
+themed by Stylix, tmpfs root with impermanence (state under `/persist`). Host `framework-13-pro`,
+user `dwarfjockey` — both from `vars` in `modules/meta.nix`.
 
-## Overview
+## Commands
+- Build (no sudo; check every change with it): `nixos-rebuild build --flake .#framework-13-pro`
+- Apply: `sudo nixos-rebuild switch --flake .#framework-13-pro` (`test` instead of `switch` to not make it the boot default)
+- Validate: `nix flake check --no-build` (the `unknown flake output 'modules'` warning is expected)
+- Inputs: `nix flake update [<input>]`
 
-NixOS flake configuration for a Framework 13 Pro laptop (Intel Core Ultra Series 3 / Panther Lake). Single host, single user; both names come from `vars.nix` (currently `framework-13-pro` / `robert`). Uses an ephemeral root filesystem (tmpfs) with impermanence for persistent state under `/persist`.
-
-Repo: `github.com/DwarfJockey/nixos-config`. Identity is parameterized (see *Variables* below) so the config can be re-hosted; the *hardware* is not — the `nixos-hardware` module in `flake.nix`, the `hardware.intelgpu.driver = "xe"` choice, the kernel pin, the display scale, and the lock-screen geometry derived from it are all specific to a Panther Lake Framework 13 Pro. README.md's "Different hardware" table enumerates them. The backlight node used to be on that list and no longer is: it discovers itself at runtime now (see *boot-defaults* below).
-
-## Build Commands
-
-```bash
-# Build and activate system configuration
-sudo nixos-rebuild switch --flake .#framework-13-pro
-
-# Test without making it the boot default
-sudo nixos-rebuild test --flake .#framework-13-pro
-
-# Build without activating (dry check; no sudo needed)
-nixos-rebuild build --flake .#framework-13-pro
-
-# Check flake validity
-nix flake check
-
-# Update all flake inputs
-nix flake update
-
-# Update a single input
-nix flake update <input-name>
-```
-
-## Architecture
-
-**File layout:**
-- `vars.nix` — Every personal/host-specific value. See *Variables* below.
-- `flake.nix` — Entry point. Defines inputs, passes all of them plus `vars` as `specialArgs` to modules.
-- `hosts/default.nix` — Thin host entry. Imports the modules below plus host-only bits (locale, top-level packages, stateVersion). Not named after the host: the hostname is `vars.hostname`, so a fixed directory name would go stale.
-- `hosts/{hardware-configuration,disko}.nix` — Disk layout, filesystems, kernel modules. Root is tmpfs; `/nix` and `/persist` are Btrfs subvolumes.
-- `modules/nixos/{boot,nix,networking,hardware,audio,desktop,greeter,theming,persistence,power,fingerprint,keyring,apps,users,boot-defaults}.nix` — System-level NixOS modules, one concern each. `boot-defaults` sets startup hardware levels (screen brightness 50%, keyboard backlight at its lowest lit level (20/100) at boot and after resume, audio volume 100%). `hardware` enables Bluetooth and fwupd (LVFS firmware updates) — the *chosen* hardware bits, as against the generated `hosts/hardware-configuration.nix`; `power` handles suspend/lid behaviour and pins the `performance` power profile (AC and battery alike); `keyring` sets up gnome-keyring; `greeter` configures Noctalia Greeter (see *Login* below); `fingerprint` enables fprintd (see *Fingerprint* below).
-- `modules/home-manager/{shell,editor,desktop}.nix` plus `modules/home-manager/desktop/{umbriel,noctalia,browser,terminal,comms}.nix` — Home Manager modules imported by `home/default.nix`. `desktop.nix` is a thin importer; the per-app config lives in `desktop/`.
-- `modules/wallpaper.nix` — Not a module: a plain function returning the themed wallpaper derivation, imported by both the Noctalia shell (Home Manager) and the greeter (NixOS). See *Wallpaper* below.
-- `modules/colors.nix` — Not a module either: `{ over, palette }`, shared by the manual Stylix bridges. `over fg bg alpha` composites in sRGB the way adw-gtk3 writes its colours, for the places a real alpha channel can't reach (a literal `#RRGGBBAA` covers the places that keep an alpha channel). `palette` is the single Noctalia colour-role mapping: the greeter takes its keys as-is, the shell prefixes them into its own `mOnSurfaceVariant` spelling. Imported by `desktop/{umbriel,noctalia}.nix`, `nixos/greeter.nix` and `home/default.nix`. See *Theming* below.
-- `home/default.nix` — Home Manager entry point (persistence, packages, Claude Code settings). Imported as a NixOS module, not standalone.
-- `secrets/secrets.nix` + `secrets/*.age` — agenix recipients and encrypted secrets. Decrypted at boot via `/persist/etc/ssh/ssh_host_ed25519_key`.
-
-**Key flake inputs:** nixpkgs (unstable), nixos-hardware, impermanence, disko, home-manager, noctalia, noctalia-plugins, noctalia-greeter, nixvim, umbriel, xdg-desktop-portal-umbriel, zen-browser, firefox-addons, nixcord, agenix, stylix. Everything follows the one `nixpkgs`; nothing pins a second tree.
-
-## Key Patterns
-
-**Variables:** `vars.nix` at the repo root is a plain attrset holding every personal/host-specific value — `hostname`, `username`, `timeZone`, `locale`, `keyboardLayout`, `configDir`, `diskDevice`, `swapSize`, `hashedPassword`, `git`, `irc`, `apps.*`, `stateVersion`. `flake.nix` imports it in a `let` (it needs `vars.hostname` to name the `nixosConfigurations` attr) and passes it as `specialArgs = { inherit inputs vars; }`; `modules/nixos/users.nix` forwards it across the Home Manager boundary with `extraSpecialArgs = { inherit inputs vars; }`. Modules take it as a function arg: `{ vars, ... }:`. **Nothing else in the repo should hardcode a username, hostname, or disk path** — grep for a literal before adding one. The arg is named `vars`, not `settings`, because `settings = { ... }` is already a heavily used module option in `noctalia.nix`, `umbriel.nix`, and `greeter.nix`.
-
-`null` means off throughout: `hashedPassword = null` and `git = null` select the agenix path (see *Secrets*), `irc = null` drops senpai. `apps.{onePassword,steam,discord,fingerprint,romVault}` are booleans gating `lib.mkIf` blocks inside the existing modules — plus the matching tray `systemd.user.services` and `general.autostart` entries in `desktop/umbriel.nix`, and the `onepassword`/`gamemode` entries in `extraGroups` (naming a group no module created is a build-time assertion failure). The persistence lists are deliberately *not* gated: a persisted directory for a disabled app is an empty directory.
-
-`fingerprint.nix` stays imported unconditionally even when `apps.fingerprint` is off — `nixos-hardware`'s framework module sets `services.fprintd.enable = lib.mkDefault true`, so dropping the import would leave fprintd enabled *and* lose the `login.fprintAuth = false` fix. The module sets a plain `false`, which outranks that `mkDefault`.
-
-When changing any of this, the regression test is exact: with `vars.nix` unchanged, `nixos-rebuild build --flake .#framework-13-pro` must produce a **byte-identical store path** to the running system. Then flip `vars.nix` to a throwaway user/host in a scratch copy to exercise the `mkIf false` branches.
-
-**Impermanence:** Everything outside `/nix` and `/persist` is wiped on reboot. System persistence is declared in `modules/nixos/persistence.nix` (`environment.persistence."/persist"`). User persistence is in `home/default.nix` (`home.persistence."/persist"`). When adding new stateful paths, they must be added to the appropriate persistence config.
-
-**Persist directories, never single files.** `files` entries are implemented as systemd bind mounts (`systemctl list-units --type=mount`), and `rename()` onto a mount point returns `EBUSY` — so any program that saves atomically (temp file + rename, which is what GLib's `g_file_set_contents` and Claude Code both do) fails **silently** and the persisted copy never changes. `~/.local/share/recently-used.xbel` was in the user `files` list from the initial commit and its mtime never moved off its pre-install value; it has been removed. Persist the containing directory instead, or accept the state being session-scoped. The NixOS-level `files` entries (`/etc/machine-id`, the SSH host keys) are safe only because they are written once at install and read-only afterwards.
-
-**Theming:** Stylix (`modules/nixos/theming.nix`) owns system-wide theming from a single inline base16 scheme ("Framework Anodized", `polarity = "dark"`) — colors, fonts, cursor, icons, and window opacity. With `autoEnable` on it themes every native target (GTK, Qt, Ghostty, Zen, …), and Home Manager's targets inherit the system scheme. Targets with no Stylix support are bridged manually in `modules/home-manager/desktop/`: **Noctalia** (custom palette + opacity, `noctalia.nix`), **Umbriel** (every colour it draws — borders, cheatsheet, overview, cursor — `umbriel.nix`; unlike niri it has no Stylix target to lean on), and **shadows** (split between the two by surface type). The **greeter** renders the same colour roles in `modules/nixos/greeter.nix` — it is system-scoped and cannot read Home Manager values, so both it and the shell import the one `palette` from `modules/colors.nix`. To turn off a misbehaving target: `stylix.targets.<name>.enable = false`. Run `stylix-colors` (a `writeShellScriptBin` in `shell.nix`, baked from the same `config.lib.stylix.colors` every bridge reads) to print the active palette — swatch, slot, hex. **Full detail — the Noctalia bridge, the Umbriel bridge, and the shadow split — is in `agent_docs/theming.md`.**
-
-**Session variables:** `home.sessionVariables` is written to `hm-session-vars.sh` (a POSIX script) and, for a subset, `~/.config/environment.d/10-home-manager.conf`. nushell is the login shell and sources **neither**, so those variables were silently absent from every interactive shell — `EDITOR` stayed at NixOS's `nano` rather than HM's `nvim`. `modules/home-manager/shell.nix` bridges them into `programs.nushell.environmentVariables`, skipping values containing `$` (POSIX expansions like `XDG_CONFIG_DIRS`, which nushell would take literally and which it already inherits correctly from the session). Declare user variables in `home.sessionVariables` and the bridge picks them up; variables a *GUI* app needs still have to reach the systemd user manager separately.
-
-**Desktop stack:** [Umbriel](https://github.com/noctalia-dev/umbriel) (scrollable-tiling Wayland compositor, C++23 on wlroots 0.20 + SceneFX, by the Noctalia authors) + Noctalia (bar/dock/control-center/lock), driven from keybinds with `noctalia msg <cmd>`. Noctalia detects Umbriel via `UMBRIEL_SOCKET` and has a dedicated workspace/keyboard backend for it — but only since noctalia `21a272f` (2026-08-19); older pins fall through to the generic `ext-workspace-v1` backend, which carries no occupancy bit, so every workspace reads as empty and the bar's `occupied_color` never renders. Noctalia runs as a `systemd.user.services.noctalia` unit bound to `graphical-session.target` with a short `TimeoutStopSec` (it ignores SIGTERM, so as a compositor-spawned scope it stalled shutdown for the full 90s stop timeout). Mod is Super; navigation is arrows, not hjkl. Umbriel is young and its config keys are explicitly not stability promises — check upstream `docs/user/` before assuming a key still exists.
-
-Umbriel supplies natively what niri needed workarounds for: blur (`appearance.blur` + a `[[layer_rule]]`), `corner_radius`, and a drop shadow. It brings no polkit agent, and neither does Noctalia: `fprintd-enroll`/`pkexec` get an instant, promptless `PermissionDenied`, with zero polkit activity in Noctalia's logs and no agent owner in `busctl --user list`. So `modules/nixos/theming.nix` runs a `systemd.user.services.polkit-agent` (mate-polkit) instead. It's GTK, not Qt, specifically to avoid the Kvantum/`QT_STYLE_OVERRIDE` segfault that killed niri-flake's `polkit-kde-agent` (Stylix's qt target exports `QT_STYLE_OVERRIDE=kvantum`, which a Qt/QML agent chokes on). Screen capture goes through `xdg-desktop-portal-umbriel` (`modules/nixos/desktop.nix`); the `.portal` file matches on `XDG_CURRENT_DESKTOP=umbriel`, which the compositor exports lowercase. Touchpads are the exception to "Umbriel supplies it natively": it applies only `tap` and `natural_scroll` and never calls `libinput_device_config_click_set_method()`, so the clickpad takes libinput's default button-areas. `modules/nixos/desktop.nix` therefore ships an `/etc/libinput/local-overrides.quirks` entry that borrows `ModelChromebook` for its click-method side effect to get clickfinger (1/2/3-finger press = left/right/middle). It is a model label, not a click-method knob — delete it if Umbriel ever gains a `click_method` key. XWayland goes through the xwayland-satellite on the Umbriel package's wrapper PATH; `desktop.nix` overrides `programs.umbriel.package` to patch it (clamp negative `WM_NORMAL_HINTS` sizes — mono WinForms sets them, and the resulting protocol error panics satellite and drops every X client), and the Home Manager module takes `osConfig.programs.umbriel.package` so there is one umbriel. `corner_radius` is the other exception: Umbriel rounds per scene buffer and only the toplevel's own surface, so a client that paints into a `wl_subsurface` — Gecko, hence Zen — keeps square corners inside the rounded border ring (detail in `agent_docs/theming.md`).
-
-**Session autostart:** Umbriel raises `umbriel-session.target` (→ `graphical-session.target`) with `--no-block` and then immediately spawns `general.autostart`, so an autostart entry can never be ordered after a session service. **Tray apps therefore must be `systemd.user.services` with `After = [ "noctalia.service" ]`, never `general.autostart`** (`modules/home-manager/desktop/umbriel.nix`). Noctalia hosts `org.kde.StatusNotifierWatcher` but only claims the name seconds into startup, and Electron asks `NameHasOwner` exactly once at tray-creation with no Wayland fallback and no retry — so 1Password and Vesktop used to come up running but permanently invisible (hidden by `--silent`/`--start-minimized`, no icon to restore from). `noctalia.service` is `Type = "dbus"` on that name so the unit only goes active once the watcher is live, which is what makes the `After=` meaningful. Apps that re-register on `NameOwnerChanged` (Steam, via libayatana-appindicator) can stay in `general.autostart`. Zen needs no tray but is a unit anyway: autostart children share `umbriel.service`'s cgroup, so at logout Zen and the compositor get SIGTERM together and Zen dies mid-shutdown without a display (and `umbriel.service` hung its full stop timeout). As a unit it is stopped before the compositor.
-
-**Login:** `greetd` runs **Noctalia Greeter** (`modules/nixos/greeter.nix`), which brings its own wlroots compositor and matches the Noctalia shell. There is deliberately **no autologin** — `modules/nixos/desktop.nix` only sets `services.greetd.enable`; the greeter module owns `default_session.command`, and nixpkgs defaults `default_session.user` to `greeter`. Do not set either in `desktop.nix`: the greeter module reads `default_session.user` to own `/var/lib/noctalia-greeter`, and adding an `initial_session` would both bypass the greeter and make logind register the desktop as `Class=greeter` (which breaks `Lock`/`SetLockedHint`, so the compositor and Noctalia log "Session does not support lock screen"). The greeter is **password-only**; sessions are discovered from `wayland-sessions` `.desktop` files via `XDG_DATA_DIRS`, and `settings.session.default` takes the picker *label* (`Umbriel`), not the `.desktop` id — list them with `noctalia-greeter sessions`. The entry itself comes from `programs.umbriel`, whose NixOS module registers the package in `services.displayManager.sessionPackages`.
-
-**Fingerprint:** `services.fprintd.enable` makes nixpkgs default `security.pam.services.<name>.fprintAuth` to true for **every** PAM service, putting `pam_fprintd` first as `auth sufficient`. PAM auth is serialised, so any graphical caller that cannot render "place your finger" blocks for its full 30s timeout before `pam_unix` sees the typed password. `modules/nixos/fingerprint.nix` therefore keeps it for `sudo` but sets `login.fprintAuth = false` — the stack Noctalia's lock screen uses. Noctalia runs its own fprintd client alongside PAM, so swipe-to-unlock still works there. Enroll with `fprintd-enroll -f <finger>` as the user (**not** under `sudo`, which enrolls root); prints live in `/var/lib/fprint`, which is persisted.
-
-**Wallpaper:** A source photo is vendored at `modules/home-manager/wallpapers/acrylic-pour-magenta-cyan.jpg`, remapped onto the base16 palette (lutgen, luminosity-preserved) and dimmed toward `base00` (imagemagick) into `themedWallpaper` — a PNG built in the Nix store, so it tracks the scheme and survives the ephemeral root. The derivation lives in `modules/wallpaper.nix` because both the Noctalia shell (Home Manager) and the greeter (NixOS) show it and the greeter cannot reach into Home Manager scope; identical arguments mean one build and one store path. Noctalia ignores `settings.wallpaper.default.path` (its *live* wallpaper lives in non-persisted runtime state, seeded from its bundled default — see *Noctalia settings* below), so it is not set; instead `noctalia msg wallpaper-set` applies `themedWallpaper` from `hooks.started` at every Noctalia start and from a `home.activation.noctaliaWallpaper` hook after each switch (`modules/home-manager/desktop/noctalia.nix`). Cycling is disabled.
-
-**Editor:** Nixvim with LSP servers for Nix (nixd), Lua, Rust, TypeScript, Python, and Bash. No colorscheme is configured — nvim uses its default (`editor.nix`).
-
-**Claude Code:** All of it lives in `home/default.nix`. Claude's *global* config (onboarding flags, project trust, MCP auth) is `$CLAUDE_CONFIG_DIR/.claude.json`, defaulting to `$HOME/.claude.json` — a sibling of the persisted `.claude` directory, so it was wiped on every reboot and the theme picker replayed on the first launch after boot. Adding it to `home.persistence` does **not** work — see *Impermanence* above on why single-file entries break atomic writes. Instead `home.sessionVariables.CLAUDE_CONFIG_DIR` points at `~/.claude`, so the file lands inside the already-bind-mounted directory; `settings.json` resolves to `$CLAUDE_CONFIG_DIR/settings.json` and does not move. `settings.json` stays a real file (so `/model`, `/effort` can write it) and `home.activation.claudeSettings` merges the declarative fields back over it on every switch *and* every boot. Claude's built-in desktop notification is an OSC 9/777 escape sequence carrying no icon, so a `Notification` hook sends it via `notify-send` instead, stamping the vendored `home/claude-logo.png`. The theme is another manual Stylix bridge: `~/.claude/themes/base16.json` is generated with `base = "dark-ansi"`, which resolves unlisted colors through the terminal's ANSI palette (already base16 via Stylix), so only base09 and the diff *backgrounds* — the slots the 16 ANSI colors cannot reach — are overridden.
-
-**Umbriel config generation:** `programs.umbriel.settings` (`modules/home-manager/desktop/umbriel.nix`) is a **free-form attrset**, not a typed module — it goes straight through `pkgs.formats.toml` to `~/.config/umbriel/config.toml`, so any key the binary supports can just be written. There is no raw-config escape hatch and none is needed. `programs.umbriel.validateConfig` (on by default) runs `umbriel validate -c` on the result at build time, so an unknown or malformed key fails the rebuild rather than the login. Umbriel also live-reloads the file on save, but here it is a store symlink, so a rebuild is what applies a change.
-
-**Noctalia settings (declarative vs runtime):** `programs.noctalia.settings` writes the declarative `~/.config/noctalia/config.toml` (persisted). The Noctalia GUI writes to `~/.local/state/noctalia/settings.toml`, which is **not** persisted (wiped on reboot). GUI changes must be ported back into `modules/home-manager/desktop/noctalia.nix` to survive. The greeter is the same story in reverse: its `greeter.toml` is a tmpfiles symlink into the store, rebuilt every boot from `programs.noctalia-greeter.settings`, so its mutable `sync.toml` is ignored — configure the greeter declaratively, not via shell "greeter sync".
-
-**Noctalia plugins:** Install by symlinking the plugin directory into `~/.local/share/noctalia/plugins/<name>` with `xdg.dataFile` — that path is always scanned as the last (highest-precedence) plugin root, so no source config is needed and the scan follows symlinks. The plugin repo is pinned as a `flake = false` input (`noctalia-plugins` → `noctalia-dev/community-plugins`). Three separate keys, all in `noctalia.nix`: `settings.plugins.enabled` (discovery alone does **not** load a plugin), `settings.plugin_settings."<author>/<plugin>"` for plugin-level settings, and `settings.widget.<name>` for per-instance ones — a named instance carrying `type = "<author>/<plugin>:<entry>"`, with `<name>` in the `bar.*.{start,center,end}` zone (Noctalia resolves unknown widget types through the plugin registry, so the full entry id also works as the instance name with no `type` key). `settings.plugins.source = [ ]` is deliberate: with the key absent Noctalia seeds two built-in *git* sources and re-clones both (~16MB) into non-persisted `~/.local/state/noctalia` on **every boot**; an explicit empty array suppresses that (it probes the raw table for the array, so `[]` counts as configured and a missing key does not). The trade is an empty in-shell plugin browser. Note `programs.noctalia.validateConfig` runs in a sandbox with no plugin dir, so every plugin key emits an "unrecognized widget type" / "no loaded plugin with this id" **warning** during the build — warnings don't fail validation, so leave `validateConfig` on.
-
-**Secrets:** agenix encrypts secrets to the host's SSH host key. Edit recipients in `secrets/secrets.nix`; create/edit a secret with `nix run github:ryantm/agenix -- -e <name>.age` from inside `secrets/`. Decryption happens early at boot — `age.identityPaths` in `modules/nixos/users.nix` points at `/persist/etc/ssh/ssh_host_ed25519_key`. Git's `user.name`/`user.email` are **not** in `shell.nix`; they come from the `git-identity` secret, decrypted to `/run/agenix/git-identity` and pulled in via `programs.git.includes`.
-
-Because those `.age` files are encrypted to *this* host's key, a fresh install on other hardware cannot decrypt them — and an undecryptable `hashedPasswordFile` means no login on first boot. Hence the escape hatch: setting `vars.hashedPassword` (a `mkpasswd -m sha-512` hash) drops `age.secrets.user-password` and uses `users.users.<name>.hashedPassword` instead; setting `vars.git` drops `age.secrets.git-identity` and writes `programs.git.settings.user` directly. With both non-null, `age.secrets` evaluates to `{}` and `secrets/` is never read. `hashedPassword`, not `initialHashedPassword` — `mutableUsers = false` makes the former authoritative. README.md documents both paths.
+## Layout — dendritic pattern
+Every `.nix` file under `modules/` is a flake-parts module, imported automatically by `flake.nix`,
+except paths containing `/_`. Each file is one *feature*: it writes its NixOS part to
+`flake.modules.nixos.pc` and its Home Manager part to `flake.modules.homeManager.pc`, and the host
+(`modules/hosts/framework-13-pro.nix`) imports those two. Template: `modules/apps/1password.nix`.
+- `modules/system/` — machine: boot, nix, users + agenix, impermanence core, power, networking, …
+- `modules/desktop/` — session: umbriel, noctalia, greeter, theming, polkit, keyring, fingerprint, touchpad
+- `modules/shell/` — nushell, git, nixvim · `modules/apps/` — one file per app
+- `modules/hosts/framework-13-pro/` — hardware + disko (host-only) · `modules/_lib/` — plain helper functions
+- `secrets/` — agenix files (outside `modules/`, never imported)
 
 ## Conventions
+- Add a feature = add a file; drop one = delete it or prefix it with `_`. No enable toggles, no import lists.
+- Lower modules get `inputs`/`vars` by closure over the file's top-level args — never `specialArgs`.
+  Third-party modules are imported inside the feature that uses them.
+- Values several features share go in `vars`; never hardcode the username or hostname.
+- An app persists its own state (`home.persistence` / `environment.persistence`) in its own file.
+- An app needing a user group adds the group *and* the membership in its own file (a missing group is an eval assertion).
+- Users are fully declarative (`mutableUsers = false`); `vars.stateVersion` feeds both `system.` and `home.stateVersion`.
 
-- Mutable users are disabled; user accounts are fully declarative
-- State version: `vars.stateVersion` (currently `25.05`), used for both `system.stateVersion` and `home.stateVersion`
-- Personal values go in `vars.nix`, never inline — see *Variables* above
+## Gotchas
+- **Persist directories, never single files**: file entries are bind mounts, and atomic `rename()` onto
+  them fails silently (EBUSY).
+- Tray apps (and Zen) must be user units built by `modules/_lib/tray-app.nix`, not Umbriel `autostart`.
+- Noctalia GUI changes land in non-persisted state — port them into `modules/desktop/noctalia.nix`.
+- nushell reads no `home.sessionVariables`; `modules/shell/nushell.nix` bridges them.
+- Umbriel config keys are unstable; `validateConfig` checks them at build time. Check upstream `docs/user/`.
+- Zen extensions are pinned by the `firefox-addons` input with auto-update off: Gecko updating past the
+  pin and then being downgraded broke 1Password's IndexedDB. Bump with `nix flake update firefox-addons`.
+- Don't set greetd `default_session`/`initial_session`; keep `desktop/fingerprint.nix` even without a reader.
+
+## Deeper docs (read when touching that area)
+- `agent_docs/architecture.md` — the dendritic layout in full, file by file, and `vars`
+- `agent_docs/desktop.md` — Umbriel, Noctalia (settings, plugins, wallpaper), autostart/tray, login, fingerprint, touchpad
+- `agent_docs/theming.md` — Stylix and the manual bridges (Noctalia, Umbriel, greeter, Claude Code, Zen)
+- `agent_docs/impermanence.md` — what persists where, and why single files can't
+- `agent_docs/claude-code.md` — Claude Code config dir, settings merge, notification hook
+- `agent_docs/secrets.md` — agenix and reinstalling on other hardware
+- `agent_docs/verifying.md` — checking that a refactor didn't change the system

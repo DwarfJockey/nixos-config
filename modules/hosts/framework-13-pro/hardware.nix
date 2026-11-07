@@ -1,0 +1,34 @@
+{
+  flake.modules.nixos.framework-13-pro =
+    { modulesPath, ... }:
+    {
+      imports = [
+        (modulesPath + "/installer/scan/not-detected.nix")
+      ];
+
+      boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "usb_storage" "uas" "sd_mod" ];
+      boot.kernelModules = [ "kvm-intel" ];
+
+      # Root on tmpfs (ephemeral / impermanence). Disk layout (boot/swap/nix/persist) is in ./disko.nix.
+      # 6G of this machine's 16G: a ceiling rather than an allocation, but everything
+      # outside /nix and /persist lives here and tmpfs pages compete for RAM.
+      fileSystems."/" = {
+        device = "none";
+        fsType = "tmpfs";
+        options = [ "mode=755" "size=6G" ];
+      };
+
+      # Panther Lake (Xe3) is driven by `xe`, not `i915` — but nixos-hardware's
+      # framework-intel-core-ultra-series3 reaches the *generic* common/gpu/intel, which
+      # still defaults to i915 (there is no panther-lake GPU module upstream), so the
+      # driver is chosen here. That one option also puts the right module in
+      # boot.initrd.kernelModules (hardware.intelgpu.loadInInitrd, on by default) and
+      # fills hardware.graphics.extraPackages with intel-media-driver +
+      # intel-compute-runtime + vpl-gpu-rt — hence no hand-written package list.
+      hardware.graphics.enable = true;
+      hardware.intelgpu = {
+        driver = "xe";
+        vaapiDriver = "intel-media-driver";
+      };
+    };
+}
