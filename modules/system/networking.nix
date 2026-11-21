@@ -13,7 +13,7 @@ in
     # Saved Wi-Fi networks.
     environment.persistence."/persist".directories = [ "/etc/NetworkManager/system-connections" ];
 
-    # Network discovery (Nautilus) — resolve other hosts' .local names. No publish
+    # Network discovery (Luciole, via gvfs) — resolve other hosts' .local names. No publish
     # block: that self-advertises this host, which nothing here consumes.
     services.avahi = {
       enable = true;

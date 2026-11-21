@@ -4,3 +4,4 @@
 
 Because those `.age` files are encrypted to *this* host's key, a fresh install on other hardware cannot decrypt them — and an undecryptable `hashedPasswordFile` means no login on first boot. Hence the escape hatch: setting `vars.hashedPassword` (a `mkpasswd -m sha-512` hash) drops `age.secrets.user-password` and uses `users.users.<name>.hashedPassword` instead; setting `vars.git` drops `age.secrets.git-identity` and writes `programs.git.settings.user` directly. With both non-null, `age.secrets` evaluates to `{}` and `secrets/` is never read. `hashedPassword`, not `initialHashedPassword` — `mutableUsers = false` makes the former authoritative. README.md documents both paths.
 
+**`kalshi-api`** (`apps/kalshi.nix`): Kalshi API key id on line 1, PEM private key after it; create the key with only the `read::portfolio_balance` scope. Declared only when `secrets/kalshi-api.age` exists, so the config builds without it (the bar widget shows its error glyph).

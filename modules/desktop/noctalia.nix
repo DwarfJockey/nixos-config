@@ -259,6 +259,7 @@ in
                 "cpu"
                 "ram"
                 "sysmon"
+                "kalshi" # apps/kalshi.nix
               ];
               center = [ "media" ];
               end = [
@@ -358,9 +359,7 @@ in
           # the lock screen. Noctalia Greeter (greeter.nix) is the login
           # step now, so locking a session the user just authenticated into would be
           # pure friction. Mod+L (umbriel.nix) and idle lock are unaffected.
-          hooks.started = "${pkgs.writeShellScript "noctalia-started" ''
-            ${noctaliaBin} msg wallpaper-set "${themedWallpaper}"
-          ''}";
+          hooks.started = "${noctaliaBin} msg wallpaper-set ${themedWallpaper}";
 
           location.auto_locate = true;
           nightlight = {
@@ -508,16 +507,35 @@ in
             };
           };
 
-          # Lock screen layout, placed in Noctalia's widget editor and copied back here
-          # verbatim — the editor writes only to the non-persisted state file, so without
-          # this the login box returns to its default spot on every reboot. `cx`/`cy` are
+          # Lock screen layout (clock + login box), placed in Noctalia's widget editor and
+          # copied back here verbatim — the editor writes only to the non-persisted state
+          # file, so without this the widgets return to their default spots on every reboot. `cx`/`cy` are
           # the box centre in the `placement_*` logical space (1440x960 = the panel's
           # 2880x1920 at scale 2), so they only mean anything alongside those two, and the
           # instance name carries the output it was placed on.
           lockscreen_widgets = {
             enabled = true;
             schema_version = 2;
-            widget_order = [ "lockscreen-login-box@eDP-1" ];
+            widget_order = [
+              "lockscreen-clock@eDP-1"
+              "lockscreen-login-box@eDP-1"
+            ];
+            # Same widget factory as the desktop, so any desktop widget type works here.
+            widget."lockscreen-clock@eDP-1" = {
+              type = "clock";
+              output = "eDP-1";
+              cx = 720.0;
+              cy = 300.0;
+              box_width = 640.0;
+              box_height = 220.0;
+              placement_width = 1440.0;
+              placement_height = 960.0;
+              rotation = 0.0;
+              settings = {
+                clock_style = "digital";
+                format = "{:%l:%M %P}"; # matches the bar clock
+              };
+            };
             widget."lockscreen-login-box@eDP-1" = {
               type = "login_box";
               output = "eDP-1";

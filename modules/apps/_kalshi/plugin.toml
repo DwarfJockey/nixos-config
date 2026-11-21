@@ -1,0 +1,12 @@
+id          = "local/kalshi"
+name        = "Kalshi"
+version     = "0.1.0"
+plugin_api  = 3
+icon        = "coin"
+author      = "local"
+description = "Kalshi cash balance, hidden until clicked"
+license     = "MIT"
+
+[[widget]]
+id    = "kalshi"
+entry = "kalshi.luau"

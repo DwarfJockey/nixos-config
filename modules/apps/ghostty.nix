@@ -12,7 +12,6 @@
     # from `Categories=…TerminalEmulator` — but it pins the choice so a second terminal
     # arriving as somebody's dependency cannot silently win. Ghostty needs no ExecArg
     # entry: its desktop file declares `X-TerminalArgExec=-e`, which the spec reads.
-    # Unlike NAUTILUS_4_EXTENSION_DIR (apps/nautilus.nix), this needs no re-login.
     xdg.terminal-exec = {
       enable = true;
       settings.default = [ "com.mitchellh.ghostty.desktop" ];
@@ -24,6 +23,8 @@
     programs.ghostty = {
       enable = true;
       settings = {
+        # Default "primary" copies every selection; copy only on Ctrl+C, like other apps.
+        copy-on-select = false;
         keybind = [
           "performable:ctrl+c=copy_to_clipboard"
           "ctrl+v=paste_from_clipboard"

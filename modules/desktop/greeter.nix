@@ -39,10 +39,7 @@ in
       services.greetd.enable = true;
 
       # Noctalia Greeter — the greetd greeter, replacing the old autologin. It ships
-      # its own wlroots compositor; the module points greetd's default_session at
-      # `noctalia-greeter-session` and runs it as the `greeter` user (which is why
-      # the greetd block above must NOT set services.greetd.settings.default_session.user —
-      # the module reads that name to own /var/lib/noctalia-greeter).
+      # its own wlroots compositor.
       #
       # Password-only by design. The greeter has no fprintd client of its own; its
       # only fingerprint route is [auth].allow_empty_password plus pam_fprintd in the

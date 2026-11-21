@@ -7,4 +7,7 @@
       pulse.enable = true;
     };
   };
+
+  # WirePlumber's saved volumes and default devices, restored at login.
+  flake.modules.homeManager.pc.home.persistence."/persist".directories = [ ".local/state/wireplumber" ];
 }

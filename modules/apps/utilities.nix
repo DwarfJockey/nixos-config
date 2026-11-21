@@ -7,6 +7,7 @@
         git
         curl
         gimp
+        python3
       ];
     };
 

@@ -288,7 +288,7 @@ in
             # Apps
             "Mod+T" = "spawn:ghostty";
             "Mod+B" = "spawn:zen-twilight";
-            "Mod+E" = "spawn:nautilus";
+            "Mod+E" = "spawn:luciole";
 
             # Windows
             "Mod+Q" = "window-close";

@@ -217,18 +217,7 @@ in
                 "_d634138d-c276-4fc8-924b-40a0ea21d284_-browser-action"
                 "firefox_betterttv_net-browser-action"
               ];
-              dirtyAreaCache = [
-                "nav-bar"
-                "vertical-tabs"
-                "zen-sidebar-foot-buttons"
-                "PersonalToolbar"
-                "unified-extensions-area"
-                "toolbar-menubar"
-                "TabsToolbar"
-                "zen-sidebar-top-buttons"
-              ];
               currentVersion = 25;
-              newElementCount = 2;
             };
           };
         };

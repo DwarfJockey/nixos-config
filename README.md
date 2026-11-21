@@ -138,10 +138,6 @@ After first boot, anything not declared in some feature's `home.persistence` / `
 | Disk device and swap size (`32G`; hibernate is off, so this is overflow, not a RAM image) | `modules/hosts/framework-13-pro/disko.nix` |
 | Fingerprint reader — no reader? set its two `true`s to `false` (don't delete the file; it also carries a PAM fix) | `modules/desktop/fingerprint.nix` |
 
-The backlight node is *not* in this table: it used to be hardcoded (`intel_backlight`) and
-now discovers itself at runtime — `modules/system/boot-defaults.nix` takes the first
-writable `/sys/class/backlight/*`.
-
 ## Architecture reference
 
 For module layout and conventions see [CLAUDE.md](./CLAUDE.md); subsystem detail (desktop, theming, impermanence, secrets) is in [agent_docs/](./agent_docs).
